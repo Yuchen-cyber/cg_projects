@@ -6,8 +6,12 @@
   </head>
 	<!--	Create the HTML5 'canvas' element in which we will run WebGL
 	-->
+	
   <body onload="main()">
-    <canvas id="webgl" width="400" height="400">
+	<div style="float:left;">
+		<b>3D Parts</b>
+	<p></p>
+    <canvas id="parts" width="400" height="400" >
     Please use a browser that supports "canvas"
     </canvas>
 	<p>
@@ -15,6 +19,7 @@
 		 (where? look inside main(), inside its 'tick()' function, where we
 		 display the 'current angle' value.
 	-->
+	  <p>
 	<div id= ShapeName></div> 
 	<!-- Fill this HTML tag with JavaScript-generated text that names the shape displayed
 	To change shapes, users press the 'Next' button, which calls the 'nextShape()' function-->
@@ -30,6 +35,18 @@
 	  <button type="button" onclick="runStop()">Run/Stop</button>
       <button type="button" onclick="spinUp()">Spin >> </button>
     </p>
+	
+	</div>
+	<div style="float:right;">
+		<b>3D Assemblies</b>
+		<p></p>
+		<canvas id="assemblies" width="400" height="400" >
+			Please use a browser that supports "canvas"
+		  </canvas>
+		  <p>&larr;&rarr;: arm1 rotation(y-axis), &uarr;&darr;: joint1 rotation(z-axis)</p>
+	</div>
+	
+	
 	<!--	Load in the JavaScript libraries supplied by our textbook 
 			(Matsuda et al., 2013 WebGL Programming Guide) that help us
 			with WebGL programming:
@@ -41,5 +58,9 @@
 	<!--	Finally, load in our own JavaScript program file.
 	-->
     <script src="test_A.js"></script>
+	<script src="JointModel.js"></script>
+	<script>
+		main_b();  // This initializes your WebGL context for the second canvas
+	  </script>
   </body>
 </html>

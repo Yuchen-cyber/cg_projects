@@ -26,7 +26,7 @@ var floatsPerVertex = 7;	// # of Float32Array elements used for each vertex
 function main() {
 //==============================================================================
 	// Retrieve <canvas> element
-	var canvas = document.getElementById('webgl');
+	var canvas = document.getElementById('parts');
 
 	// Get the rendering context for WebGL
 	var gl = getWebGLContext(canvas);
