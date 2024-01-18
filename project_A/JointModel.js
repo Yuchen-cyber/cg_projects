@@ -26,6 +26,7 @@ var FSHADER_SOURCE_B =
   '  gl_FragColor = v_Color;\n' +
   '}\n';
 
+var g_lastMS = Date.now();	
 function main_b() {
   // Retrieve <canvas> element
   var canvas_b = document.getElementById('assemblies');
@@ -70,14 +71,74 @@ function main_b() {
 
   // Register the event handler to be called when keys are pressed
   document.onkeydown = function(ev){ keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); };
-
-  draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix);  // Draw the robot arm
+  var tick = function() {		    // locally (within main() only), define our 
+    // self-calling animation function. 
+    requestAnimationFrame(tick, gl_b); // browser callback request; wait
+        // til browser is ready to re-draw canvas, then
+    timerAll();  				// Update all our time-varying params, and
+    draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix);  // Draw the robot arm
+  };
+  //------------------------------------
+  tick(); 
+  
 }
 
 var ANGLE_STEP_B = 3.0;    // The increments of rotation angle (degrees)
-var g_arm1Angle = -90.0; // The rotation angle of arm1 (degrees)
-var g_joint1Angle = 0.0; // The rotation angle of joint1 (degrees)
+var g_angle0now  =   0.0;       // init Current rotation angle, in degrees
+var g_angle0rate = -22.0;       // init Rotation angle rate, in degrees/second.
+var g_angle0brake=	 1.0;				// init Speed control; 0=stop, 1=full speed.
+var g_angle0min  =-140.0;       // init min, max allowed angle, in degrees.
+var g_angle0max  =  40.0;
+                                //---------------
+var g_angle1now  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle1rate =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle1brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle1min  = -80.0;       // init min, max allowed angle, in degrees
+var g_angle1max  =  80.0;
+function timerAll() {
+  //=============================================================================
+  // Find new values for all time-varying parameters used for on-screen drawing.
+  // HINT: this is ugly, repetive code!  Could you write a better version?
+  // 			 would it make sense to create a 'timer' or 'animator' class? Hmmmm...
+  //
+    // use local variables to find the elapsed time:
+    var nowMS = Date.now();             // current time (in milliseconds)
+    var elapsedMS = nowMS - g_lastMS;   // 
+    g_lastMS = nowMS;                   // update for next webGL drawing.
+    if(elapsedMS > 1000.0) {            
+      // Browsers won't re-draw 'canvas' element that isn't visible on-screen 
+      // (user chose a different browser tab, etc.); when users make the browser
+      // window visible again our resulting 'elapsedMS' value has gotten HUGE.
+      // Instead of allowing a HUGE change in all our time-dependent parameters,
+      // let's pretend that only a nominal 1/30th second passed:
+      elapsedMS = 1000.0/30.0;
+      }
+    // Find new time-dependent parameters using the current or elapsed time:
+    g_angle0now += g_angle0rate * g_angle0brake * (elapsedMS * 0.001);	// update.
+    g_angle1now += g_angle1rate * g_angle1brake * (elapsedMS * 0.001);
+    // apply angle limits:  going above max, or below min? reverse direction!
+    // (!CAUTION! if max < min, then these limits do nothing...)
+    if((g_angle0now >= g_angle0max && g_angle0rate > 0) || // going over max, or
+       (g_angle0now <= g_angle0min && g_angle0rate < 0)  ) // going under min ?
+       g_angle0rate *= -1;	// YES: reverse direction.
+    if((g_angle1now >= g_angle1max && g_angle1rate > 0) || // going over max, or
+       (g_angle1now <= g_angle1min && g_angle1rate < 0) )	 // going under min ?
+       g_angle1rate *= -1;	// YES: reverse direction.
 
+
+    // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
+    if(g_angle0min > g_angle0max)	
+    {// if min and max don't limit the angle, then
+      if(     g_angle0now < -180.0) g_angle0now += 360.0;	// go to >= -180.0 or
+      else if(g_angle0now >  180.0) g_angle0now -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle1min > g_angle1max)
+    {
+      if(     g_angle1now < -180.0) g_angle1now += 360.0;	// go to >= -180.0 or
+      else if(g_angle1now >  180.0) g_angle1now -= 360.0;	// go to <= +180.0
+    }
+
+  }
 function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   switch (ev.keyCode) {
     case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
@@ -182,12 +243,12 @@ function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   // Arm1
   var arm1Length = 10.0; // Length of arm1
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
-  g_modelMatrix_b.rotate(g_arm1Angle, 0.0, 1.0, 0.0);    // Rotate around the y-axis
+  g_modelMatrix_b.rotate(g_angle0now, 0.0, 1.0, 0.0);    // Rotate around the y-axis
   drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); // Draw
 
   // Arm2
   g_modelMatrix_b.translate(0.0, arm1Length, 0.0); 　　　// Move to joint1
-  g_modelMatrix_b.rotate(g_joint1Angle, 0.0, 0.0, 1.0);  // Rotate around the z-axis
+  g_modelMatrix_b.rotate(g_angle1now, 0.0, 0.0, 1.0);  // Rotate around the z-axis
   g_modelMatrix_b.scale(1.3, 1.0, 1.3); // Make it a little thicker
   drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); // Draw
 }
@@ -207,3 +268,31 @@ function drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   // Draw
   gl_b.drawElements(gl_b.TRIANGLES, n, gl_b.UNSIGNED_BYTE, 0);
 }
+
+function A0_runStop() {
+  //==============================================================================
+    if(g_angle0brake > 0.5)	// if running,
+    {
+      g_angle0brake = 0.0;	// stop, and change button label:
+      document.getElementById("A0button").value="Angle 0 OFF";
+    }
+    else 
+    {
+      g_angle0brake = 1.0;	// Otherwise, go.
+      document.getElementById("A0button").value="Angle 0 ON-";
+    }
+  }
+  
+  function A1_runStop() {
+  //==============================================================================
+    if(g_angle1brake > 0.5)	// if running,
+    {
+      g_angle1brake = 0.0;	// stop, and change button label:
+      document.getElementById("A1button").value="Angle 1 OFF";
+    }
+    else 
+    {
+      g_angle1brake = 1.0;	// Otherwise, go.
+      document.getElementById("A1button").value="Angle 1 ON-";
+    }
+  }
