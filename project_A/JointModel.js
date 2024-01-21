@@ -10,7 +10,7 @@ var VSHADER_SOURCE_B =
   '  gl_Position = u_MvpMatrix * a_Position;\n' +
   // Shading calculation to make the arm look three-dimensional
   '  vec3 lightDirection = normalize(vec3(0.0, 0.5, 0.7));\n' + // Light direction
-  '  vec4 color = vec4(1.0, 0.4, 0.0, 1.0);\n' +
+  '  vec4 color = vec4(0.950, 0.599, 0.944, 0.3);\n' +
   '  vec3 normal = normalize((u_NormalMatrix * a_Normal).xyz);\n' +
   '  float nDotL = max(dot(normal, lightDirection), 0.0);\n' +
   '  v_Color = vec4(color.rgb * nDotL + vec3(0.1), color.a);\n' +
@@ -27,6 +27,7 @@ var FSHADER_SOURCE_B =
   '}\n';
 
 var g_lastMS = Date.now();	
+var floatsPerVertex_b = 3;
 function main_b() {
   // Retrieve <canvas> element
   var canvas_b = document.getElementById('assemblies');
@@ -59,7 +60,7 @@ function main_b() {
   // Get the storage locations of uniform variables
   var u_MvpMatrix = gl_b.getUniformLocation(gl_b.program, 'u_MvpMatrix');
   var u_NormalMatrix = gl_b.getUniformLocation(gl_b.program, 'u_NormalMatrix');
-  if (!u_MvpMatrix || !u_NormalMatrix) {
+  if (!u_MvpMatrix || !u_NormalMatrix ) {
     console.log('Failed to get the storage location');
     return;
   }
@@ -95,6 +96,12 @@ var g_angle1rate =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle1brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle1min  = -80.0;       // init min, max allowed angle, in degrees
 var g_angle1max  =  80.0;
+
+var g_angle2now  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle2rate =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle2brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle2min  = -30.0;       // init min, max allowed angle, in degrees
+var g_angle2max  =  60.0;
 function timerAll() {
   //=============================================================================
   // Find new values for all time-varying parameters used for on-screen drawing.
@@ -116,6 +123,7 @@ function timerAll() {
     // Find new time-dependent parameters using the current or elapsed time:
     g_angle0now += g_angle0rate * g_angle0brake * (elapsedMS * 0.001);	// update.
     g_angle1now += g_angle1rate * g_angle1brake * (elapsedMS * 0.001);
+    g_angle2now += g_angle2rate * g_angle2brake * (elapsedMS * 0.001);
     // apply angle limits:  going above max, or below min? reverse direction!
     // (!CAUTION! if max < min, then these limits do nothing...)
     if((g_angle0now >= g_angle0max && g_angle0rate > 0) || // going over max, or
@@ -124,6 +132,10 @@ function timerAll() {
     if((g_angle1now >= g_angle1max && g_angle1rate > 0) || // going over max, or
        (g_angle1now <= g_angle1min && g_angle1rate < 0) )	 // going under min ?
        g_angle1rate *= -1;	// YES: reverse direction.
+
+    if((g_angle2now >= g_angle2max && g_angle2rate > 0) || // going over max, or
+        (g_angle2now <= g_angle2min && g_angle2rate < 0) )	 // going under min ?
+        g_angle2rate *= -1;	// YES: reverse direction.
 
 
     // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
@@ -136,6 +148,11 @@ function timerAll() {
     {
       if(     g_angle1now < -180.0) g_angle1now += 360.0;	// go to >= -180.0 or
       else if(g_angle1now >  180.0) g_angle1now -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle2min > g_angle2max)
+    {
+      if(     g_angle2now < -180.0) g_angle2now += 360.0;	// go to >= -180.0 or
+      else if(g_angle2now >  180.0) g_angle2now -= 360.0;	// go to <= +180.0
     }
 
   }
@@ -160,15 +177,42 @@ function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
 }
 
 function initVertexBuffers_b(gl_b) {
-  // Vertex coordinates（a cuboid 3.0 in width, 10.0 in height, and 3.0 in length with its origin at the center of its bottom)
+  var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
+	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
+	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
+  // var vertices = new Float32Array([
+  //   1.5, 10.0, 1.5, -1.5, 10.0, 1.5, -1.5,  0.0, 1.5,  1.5,  0.0, 1.5, // v0-v1-v2-v3 front
+  //   1.5, 10.0, 1.5,  1.5,  0.0, 1.5,  1.5,  0.0,-1.5,  1.5, 10.0,-1.5, // v0-v3-v4-v5 right
+  //   1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0,-1.5, -1.5, 10.0, 1.5, // v0-v5-v6-v1 up
+  //  -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5, -1.5,  0.0, 1.5, // v1-v6-v7-v2 left
+  //  -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5, -1.5,  0.0, 1.5, // v7-v4-v3-v2 down
+  //   1.5,  0.0,-1.5, -1.5,  0.0,-1.5, -1.5, 10.0,-1.5,  1.5, 10.0,-1.5  // v4-v7-v6-v5 back
+  // ]);
   var vertices = new Float32Array([
-    1.5, 10.0, 1.5, -1.5, 10.0, 1.5, -1.5,  0.0, 1.5,  1.5,  0.0, 1.5, // v0-v1-v2-v3 front
-    1.5, 10.0, 1.5,  1.5,  0.0, 1.5,  1.5,  0.0,-1.5,  1.5, 10.0,-1.5, // v0-v3-v4-v5 right
-    1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0,-1.5, -1.5, 10.0, 1.5, // v0-v5-v6-v1 up
-   -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5, -1.5,  0.0, 1.5, // v1-v6-v7-v2 left
-   -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5, -1.5,  0.0, 1.5, // v7-v4-v3-v2 down
-    1.5,  0.0,-1.5, -1.5,  0.0,-1.5, -1.5, 10.0,-1.5,  1.5, 10.0,-1.5  // v4-v7-v6-v5 back
-  ]);
+    // Front face
+    1.5, 10.0, 1.5, -1.5, 10.0, 1.5,  -1.5, 0.0, 1.5, // Triangle 1
+    1.5, 10.0, 1.5,  -1.5, 0.0, 1.5,  1.5, 0.0, 1.5,   // Triangle 2
+
+    // Right face
+    1.5, 10.0, 1.5,  1.5, 0.0, 1.5,  1.5, 0.0, -1.5,  // Triangle 1
+    1.5, 10.0, 1.5,  1.5, 0.0, -1.5,     1.5, 10.0, -1.5,  // Triangle 2
+
+    // Up face
+    1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0, -1.5,// Triangle 1
+    1.5, 10.0, 1.5,  -1.5, 10.0, -1.5, -1.5, 10.0, 1.5, // Triangle 2
+
+    // Left face
+    -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5,  // Triangle 1
+    -1.5, 10.0, 1.5, -1.5,  0.0,-1.5,  -1.5,  0.0, 1.5, // Triangle 2
+
+    // Down face
+    -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5,   // Triangle 1
+    -1.5,  0.0,-1.5, 1.5,  0.0, 1.5,  -1.5,  0.0, 1.5,  // Triangle 2
+
+    // Back face
+    1.5, 0.0, -1.5, -1.5, 0.0, -1.5, -1.5, 10.0, -1.5, // Triangle 1
+    1.5, 0.0, -1.5,  -1.5, 10.0, -1.5,  1.5, 10.0, -1.5// Triangle 2
+]);
 
   // Normal
   var normals = new Float32Array([
@@ -179,36 +223,86 @@ function initVertexBuffers_b(gl_b) {
     0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0, // v7-v4-v3-v2 down
     0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0  // v4-v7-v6-v5 back
   ]);
+  
 
   // Indices of the vertices
-  var indices = new Uint8Array([
-     0, 1, 2,   0, 2, 3,    // front
-     4, 5, 6,   4, 6, 7,    // right
-     8, 9,10,   8,10,11,    // up
-    12,13,14,  12,14,15,    // left
-    16,17,18,  16,18,19,    // down
-    20,21,22,  20,22,23     // back
-  ]);
+  // var indices = new Uint8Array([
+  //    0, 1, 2,   0, 2, 3,    // front
 
+  //    4, 5, 6,   4, 6, 7,    // right
+
+  //    8, 9,10,   8,10,11,    // up
+
+  //   12,13,14,  12,14,15,    // left
+
+  //   16,17,18,  16,18,19,    // down
+
+  //   20,21,22,  20,22,23     // back
+
+    
+  // ]);
+  var colors = new Float32Array([
+    // Face 1 (Red)
+    1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
+    1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
+
+    // Face 2 (Green)
+    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
+    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
+
+    // Face 3 (Blue)
+    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
+    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
+
+    // Face 4 (Yellow)
+    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
+    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
+
+    // Face 5 (Magenta)
+    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
+    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
+
+    // Face 6 (Cyan)
+    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,
+    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0
+]);
   // Write the vertex property to buffers (coordinates and normals)
-  if (!initArrayBuffer_b(gl_b, 'a_Position', vertices, gl_b.FLOAT, 3)) return -1;
-  if (!initArrayBuffer_b(gl_b, 'a_Normal', normals, gl_b.FLOAT, 3)) return -1;
+  if (!initArrayBuffer_b(gl_b, 'a_Position', vertices, gl_b.FLOAT, 3)) return -1; // Initialize color buffer
+  // if (!initArrayBuffer_b(gl_b, 'a_Normal', normals, gl_b.FLOAT, 3)) return -1;
+  // g_baseBuffer = initArrayBufferForLaterUse(gl_b, vertices_base, 3, gl_b.FLOAT);
+  // if (!g_baseBuffer) return -1;
 
   // Unbind the buffer object
-  gl_b.bindBuffer(gl_b.ARRAY_BUFFER, null);
+  // gl_b.bindBuffer(gl_b.ARRAY_BUFFER, null);
 
-  // Write the indices to the buffer object
-  var indexBuffer = gl_b.createBuffer();
-  if (!indexBuffer) {
-    console.log('Failed to create the buffer object');
-    return -1;
-  }
-  gl_b.bindBuffer(gl_b.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl_b.bufferData(gl_b.ELEMENT_ARRAY_BUFFER, indices, gl_b.STATIC_DRAW);
+  // // Write the indices to the buffer object
+  // var indexBuffer = gl_b.createBuffer();
+  // if (!indexBuffer) {
+  //   console.log('Failed to create the buffer object');
+  //   return -1;
+  // }
 
-  return indices.length;
+  // gl_b.bindBuffer(gl_b.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  // gl_b.bufferData(gl_b.ELEMENT_ARRAY_BUFFER, vertices, gl_b.STATIC_DRAW);
+  var n = vertices.length / 3;
+  return n;
 }
+function initArrayBufferForLaterUse(gl_b, data, num, type){
+  var buffer = gl_b.createBuffer();   // Create a buffer object
+  if (!buffer) {
+    console.log('Failed to create the buffer object');
+    return null;
+  }
+  // Write date into the buffer object
+  gl_b.bindBuffer(gl_b.ARRAY_BUFFER, buffer);
+  gl_b.bufferData(gl_b.ARRAY_BUFFER, data, gl_b.STATIC_DRAW);
 
+  // Store the necessary information to assign the object to the attribute variable later
+  buffer.num = num;
+  buffer.type = type;
+
+  return buffer;
+}
 function initArrayBuffer_b(gl_b, attribute, data, type, num) {
   // Create a buffer object
   var buffer = gl_b.createBuffer();
@@ -239,7 +333,12 @@ var g_modelMatrix_b = new Matrix4(), g_mvpMatrix = new Matrix4();
 function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   // Clear color and depth buffer
   gl_b.clear(gl_b.COLOR_BUFFER_BIT | gl_b.DEPTH_BUFFER_BIT);
-
+  // Draw a base
+  var baseHeight = 2.0;
+  g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
+  g_modelMatrix_b.scale(2.5, 0.1, 2.5); // Make it a little thicker
+  drawBox(gl_b, n,viewProjMatrix_b,u_MvpMatrix, u_NormalMatrix);
+  
   // Arm1
   var arm1Length = 10.0; // Length of arm1
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
@@ -251,6 +350,19 @@ function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   g_modelMatrix_b.rotate(g_angle1now, 0.0, 0.0, 1.0);  // Rotate around the z-axis
   g_modelMatrix_b.scale(1.3, 1.0, 1.3); // Make it a little thicker
   drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); // Draw
+
+  pushMatrix(g_modelMatrix_b);
+  //Tongs1
+  g_modelMatrix_b.translate(0, arm1Length,1.0);
+  g_modelMatrix_b.rotate(g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
+  g_modelMatrix_b.scale(0.3, 0.2, 0.3); // Make it a little thicker
+  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix, u_NormalMatrix);
+  g_modelMatrix_b = popMatrix();
+  //Tongs1
+  g_modelMatrix_b.translate(0, arm1Length,-1.0);
+  g_modelMatrix_b.rotate(-g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
+  g_modelMatrix_b.scale(0.3, 0.2, 0.3); // Make it a little thicker
+  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix, u_NormalMatrix);
 }
 
 var g_normalMatrix = new Matrix4(); // Coordinate transformation matrix for normals
@@ -266,7 +378,10 @@ function drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
   g_normalMatrix.transpose();
   gl_b.uniformMatrix4fv(u_NormalMatrix, false, g_normalMatrix.elements);
   // Draw
-  gl_b.drawElements(gl_b.TRIANGLES, n, gl_b.UNSIGNED_BYTE, 0);
+  gl_b.drawArrays(gl_b.TRIANGLES, 0,n);
+  // gl_b.drawElements(gl_b.TRIANGLES, n, gl_b.UNSIGNED_BYTE, 0);
+
+  // gl_b.drawArrays(gl_b.TRIANGLES, 2, 36/floatsPerVertex_b);
 }
 
 function A0_runStop() {
@@ -279,7 +394,7 @@ function A0_runStop() {
     else 
     {
       g_angle0brake = 1.0;	// Otherwise, go.
-      document.getElementById("A0button").value="Angle 0 ON-";
+      document.getElementById("A0button").value="Angle 0 ON";
     }
   }
   
@@ -293,6 +408,20 @@ function A0_runStop() {
     else 
     {
       g_angle1brake = 1.0;	// Otherwise, go.
-      document.getElementById("A1button").value="Angle 1 ON-";
+      document.getElementById("A1button").value="Angle 1 ON";
     }
   }
+
+  function A2_runStop() {
+    //==============================================================================
+      if(g_angle2brake > 0.5)	// if running,
+      {
+        g_angle2brake = 0.0;	// stop, and change button label:
+        document.getElementById("A2button").value="Angle 2 OFF";
+      }
+      else 
+      {
+        g_angle2brake = 1.0;	// Otherwise, go.
+        document.getElementById("A2button").value="Angle 2 ON";
+      }
+    }
