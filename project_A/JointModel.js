@@ -2,18 +2,14 @@
 // Vertex shader program
 var VSHADER_SOURCE_B =
   'attribute vec4 a_Position;\n' +
-  'attribute vec4 a_Normal;\n' +
+  'attribute vec4 a_Color;\n' +
   'uniform mat4 u_MvpMatrix;\n' +
-  'uniform mat4 u_NormalMatrix;\n' +
   'varying vec4 v_Color;\n' +
   'void main() {\n' +
   '  gl_Position = u_MvpMatrix * a_Position;\n' +
   // Shading calculation to make the arm look three-dimensional
   '  vec3 lightDirection = normalize(vec3(0.0, 0.5, 0.7));\n' + // Light direction
-  '  vec4 color = vec4(0.950, 0.599, 0.944, 0.3);\n' +
-  '  vec3 normal = normalize((u_NormalMatrix * a_Normal).xyz);\n' +
-  '  float nDotL = max(dot(normal, lightDirection), 0.0);\n' +
-  '  v_Color = vec4(color.rgb * nDotL + vec3(0.1), color.a);\n' +
+  '  v_Color = a_Color;\n' +
   '}\n';
 
 // Fragment shader program
@@ -27,7 +23,7 @@ var FSHADER_SOURCE_B =
   '}\n';
 
 var g_lastMS = Date.now();	
-var floatsPerVertex_b = 3;
+var floatsPerVertex_b = 6;
 function main_b() {
   // Retrieve <canvas> element
   var canvas_b = document.getElementById('assemblies');
@@ -59,8 +55,7 @@ function main_b() {
 
   // Get the storage locations of uniform variables
   var u_MvpMatrix = gl_b.getUniformLocation(gl_b.program, 'u_MvpMatrix');
-  var u_NormalMatrix = gl_b.getUniformLocation(gl_b.program, 'u_NormalMatrix');
-  if (!u_MvpMatrix || !u_NormalMatrix ) {
+  if (!u_MvpMatrix ) {
     console.log('Failed to get the storage location');
     return;
   }
@@ -71,13 +66,13 @@ function main_b() {
   viewProjMatrix_b.lookAt(20.0, 10.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
   // Register the event handler to be called when keys are pressed
-  document.onkeydown = function(ev){ keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); };
+  document.onkeydown = function(ev){ keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix ); };
   var tick = function() {		    // locally (within main() only), define our 
     // self-calling animation function. 
     requestAnimationFrame(tick, gl_b); // browser callback request; wait
         // til browser is ready to re-draw canvas, then
     timerAll();  				// Update all our time-varying params, and
-    draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix);  // Draw the robot arm
+    draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix);  // Draw the robot arm
   };
   //------------------------------------
   tick(); 
@@ -156,7 +151,7 @@ function timerAll() {
     }
 
   }
-function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
+function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
   switch (ev.keyCode) {
     case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
       if (g_joint1Angle < 135.0) g_joint1Angle += ANGLE_STEP_B;
@@ -173,7 +168,7 @@ function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
     default: return; // Skip drawing at no effective action
   }
   // Draw the robot arm
-  draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix);
+  draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix);
 }
 
 function initVertexBuffers_b(gl_b) {
@@ -190,28 +185,28 @@ function initVertexBuffers_b(gl_b) {
   // ]);
   var vertices = new Float32Array([
     // Front face
-    1.5, 10.0, 1.5, -1.5, 10.0, 1.5,  -1.5, 0.0, 1.5, // Triangle 1
-    1.5, 10.0, 1.5,  -1.5, 0.0, 1.5,  1.5, 0.0, 1.5,   // Triangle 2
+    1.5, 10.0, 1.5,ctrColr[0], ctrColr[1], ctrColr[2], -1.5, 10.0, 1.5, topColr[0], topColr[1], topColr[2], -1.5, 0.0, 1.5,botColr[0], botColr[1], botColr[2], // Triangle 1
+    1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2], -1.5, 0.0, 1.5,botColr[0], botColr[1], botColr[2],  1.5, 0.0, 1.5,  topColr[0], topColr[1], topColr[2], // Triangle 2
 
     // Right face
-    1.5, 10.0, 1.5,  1.5, 0.0, 1.5,  1.5, 0.0, -1.5,  // Triangle 1
-    1.5, 10.0, 1.5,  1.5, 0.0, -1.5,     1.5, 10.0, -1.5,  // Triangle 2
+    1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2], 1.5, 0.0, 1.5, topColr[0], topColr[1], topColr[2], 1.5, 0.0, -1.5, botColr[0], botColr[1], botColr[2], // Triangle 1
+    1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2], 1.5, 0.0, -1.5, botColr[0], botColr[1], botColr[2],  1.5, 10.0, -1.5,topColr[0], topColr[1], topColr[2], // Triangle 2
 
     // Up face
-    1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0, -1.5,// Triangle 1
-    1.5, 10.0, 1.5,  -1.5, 10.0, -1.5, -1.5, 10.0, 1.5, // Triangle 2
+    1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2], 1.5, 10.0,-1.5, topColr[0], topColr[1], topColr[2],-1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2],// Triangle 1
+    1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2], -1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2],-1.5, 10.0, 1.5, topColr[0], topColr[1], topColr[2],// Triangle 2
 
     // Left face
-    -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5,  // Triangle 1
-    -1.5, 10.0, 1.5, -1.5,  0.0,-1.5,  -1.5,  0.0, 1.5, // Triangle 2
+    -1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2],-1.5, 10.0,-1.5,topColr[0], topColr[1], topColr[2], -1.5,  0.0,-1.5, botColr[0], botColr[1], botColr[2], // Triangle 1
+    -1.5, 10.0, 1.5, ctrColr[0], ctrColr[1], ctrColr[2],-1.5,  0.0,-1.5, botColr[0], botColr[1], botColr[2], -1.5,  0.0, 1.5, topColr[0], topColr[1], topColr[2],// Triangle 2
 
     // Down face
-    -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5,   // Triangle 1
-    -1.5,  0.0,-1.5, 1.5,  0.0, 1.5,  -1.5,  0.0, 1.5,  // Triangle 2
+    -1.5,  0.0,-1.5, ctrColr[0], ctrColr[1], ctrColr[2], 1.5,  0.0,-1.5, topColr[0], topColr[1], topColr[2], 1.5,  0.0, 1.5,  botColr[0], botColr[1], botColr[2], // Triangle 1
+    -1.5,  0.0,-1.5, ctrColr[0], ctrColr[1], ctrColr[2],1.5,  0.0, 1.5, botColr[0], botColr[1], botColr[2], -1.5,  0.0, 1.5,topColr[0], topColr[1], topColr[2],  // Triangle 2
 
     // Back face
-    1.5, 0.0, -1.5, -1.5, 0.0, -1.5, -1.5, 10.0, -1.5, // Triangle 1
-    1.5, 0.0, -1.5,  -1.5, 10.0, -1.5,  1.5, 10.0, -1.5// Triangle 2
+    1.5, 0.0, -1.5,ctrColr[0], ctrColr[1], ctrColr[2],-1.5, 0.0, -1.5,topColr[0], topColr[1], topColr[2], -1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2], // Triangle 1
+    1.5, 0.0, -1.5,ctrColr[0], ctrColr[1], ctrColr[2],  -1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2], 1.5, 10.0, -1.5,topColr[0], topColr[1], topColr[2]// Triangle 2
 ]);
 
   // Normal
@@ -243,7 +238,7 @@ function initVertexBuffers_b(gl_b) {
   // ]);
   var colors = new Float32Array([
     // Face 1 (Red)
-    1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
+    1.0, 0.0, 0.0, 1.0,   1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
     1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
 
     // Face 2 (Green)
@@ -267,7 +262,7 @@ function initVertexBuffers_b(gl_b) {
     0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0
 ]);
   // Write the vertex property to buffers (coordinates and normals)
-  if (!initArrayBuffer_b(gl_b, 'a_Position', vertices, gl_b.FLOAT, 3)) return -1; // Initialize color buffer
+  // if (!initArrayBuffer_b(gl_b, 'a_Position', vertices, gl_b.FLOAT, 3)) return -1; // Initialize color buffer
   // if (!initArrayBuffer_b(gl_b, 'a_Normal', normals, gl_b.FLOAT, 3)) return -1;
   // g_baseBuffer = initArrayBufferForLaterUse(gl_b, vertices_base, 3, gl_b.FLOAT);
   // if (!g_baseBuffer) return -1;
@@ -284,7 +279,60 @@ function initVertexBuffers_b(gl_b) {
 
   // gl_b.bindBuffer(gl_b.ELEMENT_ARRAY_BUFFER, indexBuffer);
   // gl_b.bufferData(gl_b.ELEMENT_ARRAY_BUFFER, vertices, gl_b.STATIC_DRAW);
-  var n = vertices.length / 3;
+  var shapeBufferHandle = gl_b.createBuffer();  
+	if (!shapeBufferHandle) {
+	console.log('Failed to create the shape buffer object');
+	return false;
+	}
+  // Bind the the buffer object to target:
+	gl_b.bindBuffer(gl_b.ARRAY_BUFFER, shapeBufferHandle);
+	// Transfer data from Javascript array colorShapes to Graphics system VBO
+	// (Use sparingly--may be slow if you transfer large shapes stored in files)
+	gl_b.bufferData(gl_b.ARRAY_BUFFER, vertices, gl_b.STATIC_DRAW);
+  var a_Position = gl_b.getAttribLocation(gl_b.program, 'a_Position');
+	if (a_Position < 0) {
+	console.log('Failed to get the storage location of a_Position');
+	return -1;
+	}
+  var FSIZE = vertices.BYTES_PER_ELEMENT; // how many bytes per stored value?
+
+	// Use handle to specify how to retrieve **POSITION** data from our VBO:
+	gl_b.vertexAttribPointer(
+			a_Position, 	// choose Vertex Shader attribute to fill with data
+			3, 						// how many values? 1,2,3 or 4.  (we're using x,y,z,w)
+			gl_b.FLOAT, 		// data type for each value: usually gl_b.FLOAT
+			false, 				// did we supply fixed-point data AND it needs normalizing?
+			FSIZE * 6, // Stride -- how many bytes used to store each vertex?
+										// (x,y,z,w, r,g,b) * bytes/value
+			0);						// Offset -- now many bytes from START of buffer to the
+										// value we will actually use?
+	gl_b.enableVertexAttribArray(a_Position);  
+										// Enable assignment of vertex buffer object's position data
+
+	// Get graphics system's handle for our Vertex Shader's color-input variable;
+	var a_Color = gl_b.getAttribLocation(gl_b.program, 'a_Color');
+	if(a_Color < 0) {
+	console.log('Failed to get the storage location of a_Color');
+	return -1;
+	}
+	// Use handle to specify how to retrieve **COLOR** data from our VBO:
+	gl_b.vertexAttribPointer(
+		a_Color, 				// choose Vertex Shader attribute to fill with data
+		3, 							// how many values? 1,2,3 or 4. (we're using R,G,B)
+		gl_b.FLOAT, 			// data type for each value: usually gl_b.FLOAT
+		false, 					// did we supply fixed-point data AND it needs normalizing?
+		FSIZE * 6, 			// Stride -- how many bytes used to store each vertex?
+										// (x,y,z,w, r,g,b) * bytes/value
+		FSIZE * 3);			// Offset -- how many bytes from START of buffer to the
+										// value we will actually use?  Need to skip over x,y,z,w
+										
+	gl_b.enableVertexAttribArray(a_Color);  
+										// Enable assignment of vertex buffer object's position data
+
+	//--------------------------------DONE!
+	// Unbind the buffer object 
+	gl_b.bindBuffer(gl_b.ARRAY_BUFFER, null);
+  var n = vertices.length / 6;
   return n;
 }
 function initArrayBufferForLaterUse(gl_b, data, num, type){
@@ -330,53 +378,49 @@ function initArrayBuffer_b(gl_b, attribute, data, type, num) {
 // Coordinate transformation matrix
 var g_modelMatrix_b = new Matrix4(), g_mvpMatrix = new Matrix4();
 
-function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
+function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
   // Clear color and depth buffer
   gl_b.clear(gl_b.COLOR_BUFFER_BIT | gl_b.DEPTH_BUFFER_BIT);
   // Draw a base
   var baseHeight = 2.0;
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
   g_modelMatrix_b.scale(2.5, 0.1, 2.5); // Make it a little thicker
-  drawBox(gl_b, n,viewProjMatrix_b,u_MvpMatrix, u_NormalMatrix);
+  drawBox(gl_b, n,viewProjMatrix_b,u_MvpMatrix);
   
   // Arm1
   var arm1Length = 10.0; // Length of arm1
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
   g_modelMatrix_b.rotate(g_angle0now, 0.0, 1.0, 0.0);    // Rotate around the y-axis
-  drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); // Draw
+  drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix); // Draw
 
   // Arm2
   g_modelMatrix_b.translate(0.0, arm1Length, 0.0); 　　　// Move to joint1
   g_modelMatrix_b.rotate(g_angle1now, 0.0, 0.0, 1.0);  // Rotate around the z-axis
   g_modelMatrix_b.scale(1.3, 1.0, 1.3); // Make it a little thicker
-  drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix); // Draw
+  drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix); // Draw
 
   pushMatrix(g_modelMatrix_b);
   //Tongs1
   g_modelMatrix_b.translate(0, arm1Length,1.0);
   g_modelMatrix_b.rotate(g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
   g_modelMatrix_b.scale(0.3, 0.2, 0.3); // Make it a little thicker
-  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix, u_NormalMatrix);
+  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix);
   g_modelMatrix_b = popMatrix();
   //Tongs1
   g_modelMatrix_b.translate(0, arm1Length,-1.0);
   g_modelMatrix_b.rotate(-g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
   g_modelMatrix_b.scale(0.3, 0.2, 0.3); // Make it a little thicker
-  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix, u_NormalMatrix);
+  drawBox(gl_b, n, viewProjMatrix_b,  u_MvpMatrix);
 }
 
-var g_normalMatrix = new Matrix4(); // Coordinate transformation matrix for normals
 
 // Draw the cube
-function drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix, u_NormalMatrix) {
+function drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
   // Calculate the model view project matrix and pass it to u_MvpMatrix
   g_mvpMatrix.set(viewProjMatrix_b);
   g_mvpMatrix.multiply(g_modelMatrix_b);
   gl_b.uniformMatrix4fv(u_MvpMatrix, false, g_mvpMatrix.elements);
-  // Calculate the normal transformation matrix and pass it to u_NormalMatrix
-  g_normalMatrix.setInverseOf(g_modelMatrix_b);
-  g_normalMatrix.transpose();
-  gl_b.uniformMatrix4fv(u_NormalMatrix, false, g_normalMatrix.elements);
+
   // Draw
   gl_b.drawArrays(gl_b.TRIANGLES, 0,n);
   // gl_b.drawElements(gl_b.TRIANGLES, n, gl_b.UNSIGNED_BYTE, 0);
