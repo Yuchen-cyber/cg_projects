@@ -22,11 +22,19 @@ var floatsPerVertex = 7;	// # of Float32Array elements used for each vertex
 													// (x,y,z,w)position + (r,g,b)color
 													// Later, see if you can add:
 													// (x,y,z) surface normal + (tx,ty) texture addr.
-
+//------------For mouse click-and-drag: -------------------------------
+var g_isDrag=false;		// mouse-drag: true when user holds down mouse button
+var g_xMclik=0.0;			// last mouse button-down position (in CVV coords)
+var g_yMclik=0.0;   
+var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
+var g_yMdragTot=0.0; 
+var g_digits=5;			// DIAGNOSTICS: # of digits to print in console.log (
+									//    console.log('xVal:', xVal.toFixed(g_digits)); // print 5 digits
+var canvas = document.getElementById('parts');
 function main() {
 //==============================================================================
 	// Retrieve <canvas> element
-	var canvas = document.getElementById('parts');
+	
 
 	// Get the rendering context for WebGL
 	var gl = getWebGLContext(canvas);
@@ -67,7 +75,18 @@ function main() {
 	
 	// Create, init current rotation angle value in JavaScript
 	var currentAngle = 0.0;
+	// user interaction
 
+	// MOUSE:
+	// Create 'event listeners' for a few vital mouse events 
+	// (others events are available too... google it!).  
+	window.addEventListener("mousedown", myMouseDown); 
+	// (After each 'mousedown' event, browser calls the myMouseDown() fcn.)
+  	window.addEventListener("mousemove", myMouseMove); 
+	window.addEventListener("mouseup", myMouseUp);	
+	window.addEventListener("click", myMouseClick);				
+	window.addEventListener("dblclick", myMouseDblClick); 
+	
 //-----------------  
 
 	// Start drawing: create 'tick' variable whose value is this function:
@@ -76,6 +95,9 @@ function main() {
 	draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix);   // Draw shapes
 	// report current angle on console
 	//console.log('currentAngle=',currentAngle);
+	document.getElementById('Mouse').innerHTML=
+			'Mouse Drag totals (CVV coords):\t'+
+			g_xMdragTot.toFixed(g_digits)+', \t'+g_yMdragTot.toFixed(g_digits);	
 	requestAnimationFrame(tick, canvas);   
 										// Request that the browser re-draw the webpage
 	};
@@ -414,62 +436,7 @@ function makeEgg() {
 	
 }
 
-function makeGroundGrid() {
-	//==============================================================================
-	// Create a list of vertices that create a large grid of lines in the x,y plane
-	// centered at x=y=z=0.  Draw this shape using the GL_LINES primitive.
-	
-		var xcount = 100;			// # of lines to draw in x,y to make the grid.
-		var ycount = 100;		
-		var xymax	= 50.0;			// grid size; extends to cover +/-xymax in x and y.
-		 var xColr = new Float32Array([1.0, 1.0, 0.3]);	// bright yellow
-		 var yColr = new Float32Array([0.5, 1.0, 0.5]);	// bright green.
-		 
-		// Create an (global) array to hold this ground-plane's vertices:
-		gndVerts = new Float32Array(floatsPerVertex*2*(xcount+ycount));
-							// draw a grid made of xcount+ycount lines; 2 vertices per line.
-							
-		var xgap = xymax/(xcount-1);		// HALF-spacing between lines in x,y;
-		var ygap = xymax/(ycount-1);		// (why half? because v==(0line number/2))
-		
-		// First, step thru x values as we make vertical lines of constant-x:
-		for(v=0, j=0; v<2*xcount; v++, j+= floatsPerVertex) {
-			if(v%2==0) {	// put even-numbered vertices at (xnow, -xymax, 0)
-				gndVerts[j  ] = -xymax + (v  )*xgap;	// x
-				gndVerts[j+1] = -xymax;								// y
-				gndVerts[j+2] = 0.0;									// z
-				gndVerts[j+3] = 1.0;									// w.
-			}
-			else {				// put odd-numbered vertices at (xnow, +xymax, 0).
-				gndVerts[j  ] = -xymax + (v-1)*xgap;	// x
-				gndVerts[j+1] = xymax;								// y
-				gndVerts[j+2] = 0.0;									// z
-				gndVerts[j+3] = 1.0;									// w.
-			}
-			gndVerts[j+4] = xColr[0];			// red
-			gndVerts[j+5] = xColr[1];			// grn
-			gndVerts[j+6] = xColr[2];			// blu
-		}
-		// Second, step thru y values as wqe make horizontal lines of constant-y:
-		// (don't re-initialize j--we're adding more vertices to the array)
-		for(v=0; v<2*ycount; v++, j+= floatsPerVertex) {
-			if(v%2==0) {		// put even-numbered vertices at (-xymax, ynow, 0)
-				gndVerts[j  ] = -xymax;								// x
-				gndVerts[j+1] = -xymax + (v  )*ygap;	// y
-				gndVerts[j+2] = 0.0;									// z
-				gndVerts[j+3] = 1.0;									// w.
-			}
-			else {					// put odd-numbered vertices at (+xymax, ynow, 0).
-				gndVerts[j  ] = xymax;								// x
-				gndVerts[j+1] = -xymax + (v-1)*ygap;	// y
-				gndVerts[j+2] = 0.0;									// z
-				gndVerts[j+3] = 1.0;									// w.
-			}
-			gndVerts[j+4] = yColr[0];			// red
-			gndVerts[j+5] = yColr[1];			// grn
-			gndVerts[j+6] = yColr[2];			// blu
-		}
-	}
+
 
 function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
 //==============================================================================
@@ -502,13 +469,18 @@ function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
   modelMatrix.scale(0.3, 0.3, 0.3);
   						// Make it smaller:
   modelMatrix.rotate(currentAngle, 1, 1, 0);  // Spin on XY diagonal axis
-// Drawing:
+  var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+  // why add 0.001? avoids divide-by-zero in next statement
+  // in cases where user didn't drag the mouse.)
+modelMatrix.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+  // Drawing:
 // Pass our current matrix to the vertex shaders:
 gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
 // Draw the cylinder's vertices, and no other vertices:
 gl.drawArrays(gl.TRIANGLE_STRIP,				// use this drawing primitive, and
 	 diaStart/floatsPerVertex, // start at this vertex number, and
 	 diaVerts.length/floatsPerVertex);	// draw this many vertices.
+
   
 
 // 	//---------Draw Ground Plane, WITHOUT spinning.
@@ -527,6 +499,132 @@ gl.drawArrays(gl.TRIANGLE_STRIP,				// use this drawing primitive, and
 }
 
 
+//===================Mouse and Keyboard event-handling Callbacks
+
+function myMouseDown(ev) {
+	//==============================================================================
+	// Called when user PRESSES down any mouse button;
+	// 									(Which button?    console.log('ev.button='+ev.button);   )
+	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+	
+	// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+	  var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+	//  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
+	  
+		// Convert to Canonical View Volume (CVV) coordinates too:
+	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+							   (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+		var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+								 (canvas.height/2);
+	//	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+		
+		g_isDrag = true;											// set our mouse-dragging flag
+		g_xMclik = x;													// record where mouse-dragging began
+		g_yMclik = y;
+		// report on webpage
+		document.getElementById('MouseAtResult').innerHTML = 
+		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
+	};
+	
+	
+	function myMouseMove(ev) {
+	//==============================================================================
+	// Called when user MOVES the mouse with a button already pressed down.
+	// 									(Which button?   console.log('ev.button='+ev.button);    )
+	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+	
+		if(g_isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
+	
+		// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+		var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+	//  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+	  
+		// Convert to Canonical View Volume (CVV) coordinates too:
+	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+							   (canvas.width/2);		// normalize canvas to -1 <= x < +1,
+		var y = (yp - canvas.height/2) /		//										-1 <= y < +1.
+								 (canvas.height/2);
+	
+	//	console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
+	
+		// find how far we dragged the mouse:
+		g_xMdragTot += (x - g_xMclik);			// Accumulate change-in-mouse-position,&
+		g_yMdragTot += (y - g_yMclik);
+		// Report new mouse position & how far we moved on webpage:
+		document.getElementById('MouseAtResult').innerHTML = 
+		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
+		document.getElementById('MouseDragResult').innerHTML = 
+		  'Mouse Drag: '+(x - g_xMclik).toFixed(g_digits)+', '
+				+(y - g_yMclik).toFixed(g_digits);
+	
+	
+		g_xMclik = x;											// Make next drag-measurement from here.
+		g_yMclik = y;
+	};
+	
+	function myMouseUp(ev) {
+	//==============================================================================
+	// Called when user RELEASES mouse button pressed previously.
+	// 									(Which button?   console.log('ev.button='+ev.button);    )
+	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+	
+	// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+		var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+	//  console.log('myMouseUp  (pixel coords):\n\t xp,yp=\t',xp,',\t',yp);
+	  
+		// Convert to Canonical View Volume (CVV) coordinates too:
+	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+							   (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+		var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+								 (canvas.height/2);
+		console.log('myMouseUp  (CVV coords  ):\n\t x, y=\t',x,',\t',y);
+		
+		g_isDrag = false;											// CLEAR our mouse-dragging flag, and
+		// accumulate any final bit of mouse-dragging we did:
+		g_xMdragTot += (x - g_xMclik);
+		g_yMdragTot += (y - g_yMclik);
+		// Report new mouse position:
+		document.getElementById('MouseAtResult').innerHTML = 
+		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
+		console.log('myMouseUp: g_xMdragTot,g_yMdragTot =',
+			g_xMdragTot.toFixed(g_digits),',\t',g_yMdragTot.toFixed(g_digits));
+	};
+	
+	function myMouseClick(ev) {
+	//=============================================================================
+	// Called when user completes a mouse-button single-click event 
+	// (e.g. mouse-button pressed down, then released)
+	// 									   
+	//    WHICH button? try:  console.log('ev.button='+ev.button); 
+	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
+	//    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
+	
+	  // STUB
+		console.log("myMouseClick() on button: ", ev.button); 
+	}	
+	
+	function myMouseDblClick(ev) {
+	//=============================================================================
+	// Called when user completes a mouse-button double-click event 
+	// 									   
+	//    WHICH button? try:  console.log('ev.button='+ev.button); 
+	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
+	//    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
+	
+	  // STUB
+		console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
+	}
 // Last time that this function was called:  (used for animation timing)
 var g_last = Date.now();
 

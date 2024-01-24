@@ -384,6 +384,7 @@ function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
   // Draw a base
   var baseHeight = 2.0;
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
+  pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(2.5, 0.1, 2.5); // Make it a little thicker
   drawBox(gl_b, n,viewProjMatrix_b,u_MvpMatrix);
   
