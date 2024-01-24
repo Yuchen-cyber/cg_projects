@@ -30,6 +30,9 @@ var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
 var g_yMdragTot=0.0; 
 var g_digits=5;			// DIAGNOSTICS: # of digits to print in console.log (
 									//    console.log('xVal:', xVal.toFixed(g_digits)); // print 5 digits
+var transX = 0.0;
+var transY = 0.0;
+var transZ = 0.0;
 var canvas = document.getElementById('parts');
 function main() {
 //==============================================================================
@@ -444,7 +447,8 @@ function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   //-------Draw Spinning Cylinder:
-  modelMatrix.setTranslate(-0.4,-0.4, 0.0);  // 'set' means DISCARD old matrix,
+  modelMatrix.setTranslate(-0.4,-0.4, 0.0); 
+  modelMatrix.translate(transX, transY, transZ);  // 'set' means DISCARD old matrix,
   						// (drawing axes centered in CVV), and then make new
   						// drawing axes moved to the lower-left corner of CVV. 
   modelMatrix.scale(1,1,-1);							// convert to left-handed coord sys
@@ -627,7 +631,7 @@ function myMouseDown(ev) {
 	}
 // Last time that this function was called:  (used for animation timing)
 var g_last = Date.now();
-
+var x_diff = 0.01;
 function animate(angle) {
 //==============================================================================
   // Calculate the elapsed time
@@ -640,6 +644,18 @@ function animate(angle) {
 //  if(angle < -120.0 && ANGLE_STEP < 0) ANGLE_STEP = -ANGLE_STEP;
   
   var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
+  var width = canvas.width;
+  var height = canvas.height;
+  
+  transX += x_diff; // Adjust the value to control the speed and direction
+  if (transX >= 1){
+	x_diff = -0.01;
+  }else if(transX <= 0){
+	x_diff = 0.01;
+  }
+  transX += x_diff;
+  transY += 0.0;
+  transZ += 0.0;
   return newAngle %= 360;
 }
 

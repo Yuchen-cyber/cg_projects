@@ -409,25 +409,7 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
   g_modelMatrix_c = popMatrix();
-  //tail
-  // g_modelMatrix_c = popMatrix();
-  // g_modelMatrix_c.translate(0, -3, 0.0); 
-  // g_modelMatrix_c.rotate(g_angle0now_c, 0.0, 0.0, 1.0);
-  // pushMatrix(g_modelMatrix_c);
-  // g_modelMatrix_c.scale(1, 0.3, 1); // Make it a little thicker
-  // drawBox_c(gl_c, n,viewProjMatrix_c,u_MvpMatrix);
-  // // g_modelMatrix_c = popMatrix();
-  // g_modelMatrix_c.translate(0, -5, 0.0); 
-  // g_modelMatrix_c.rotate(g_angle0now_c*0.5, 0.0, 0.0, 1.0);
-  // g_modelMatrix_c.scale(0.9, 0.5, 0.9); // Make it a little thicker
-  // drawBox_c(gl_c, n,viewProjMatrix_c,u_MvpMatrix);
 
-  // var arm1Length = 10.0; // Length of arm1
-  // g_modelMatrix_c.translate(0, -5, 0.0); 
-  // g_modelMatrix_c.rotate(-g_angle0now_c, 0.0, 0.0, 1.0);
-  // g_modelMatrix_c.scale(1, 0.5, 1); // Make it a little thicker
-  // drawBox_c(gl_c, n,viewProjMatrix_c,u_MvpMatrix);
-  // var arm1Length = 10.0; // Length of arm1
   g_modelMatrix_c.translate(0, -arm1Length, 0.0); 
   pushMatrix(g_modelMatrix_c);
   g_modelMatrix_c = popMatrix();
@@ -463,121 +445,7 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
 
 
 }
-function makeHead() {
-	//==============================================================================
-	// Make a diamond-like shape from two adjacent tetrahedra, aligned with Z axis.
 
-	var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
-	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
-	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
-	var baseVerts = 6; // number of vertices for the base square
-	diaVerts = new Float32Array(  ((baseVerts*8)) * floatsPerVertex);
-	var topRadius = 0.8;
-	var botRadius = 1;
-	var wallHei = 0.2
-
-	for(v=1,j=0; v<2*baseVerts; v++,j+=floatsPerVertex) {	
-		// skip the first vertex--not needed.
-		if(v%2==0)
-		{				// put even# vertices at center of cylinder's top cap:
-			diaVerts[j  ] = 0.0; 			// x,y,z,w == 0,0,1,1
-			diaVerts[j+1] = 0.0;	
-			diaVerts[j+2] = 1.0; 
-			diaVerts[j+3] = 1.0;			// r,g,b = topColr[]
-		}
-		else { 	
-						diaVerts[j  ] = topRadius* Math.cos(Math.PI*(v-1)/baseVerts);			// x
-						diaVerts[j+1] = topRadius * Math.sin(Math.PI*(v-1)/baseVerts);			// y
-
-			diaVerts[j+2] = 1.0;	// z
-			diaVerts[j+3] = 1.0;	// w.
-			// r,g,b = topColr[]
-		
-		}
-		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
-		}
-		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
-		}
-		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
-		}
-	}
-
-	for(v=0; v< 2*baseVerts; v++, j+=floatsPerVertex) {
-		if(v%2==0)	// position all even# vertices along top cap:
-		{		
-			diaVerts[j  ] = topRadius * Math.cos(Math.PI*(v)/baseVerts);		// x
-			diaVerts[j+1] = topRadius * Math.sin(Math.PI*(v)/baseVerts);		// y
-			diaVerts[j+2] = 1.0;	// z
-			diaVerts[j+3] = 1.0;	// w.
-		
-		}
-		else		// position all odd# vertices along the bottom cap:
-		{
-			diaVerts[j  ] = botRadius * Math.cos(Math.PI*(v-1)/baseVerts);		// x
-			diaVerts[j+1] = botRadius * Math.sin(Math.PI*(v-1)/baseVerts);		// y
-			diaVerts[j+2] =-wallHei;	// z
-			diaVerts[j+3] = 1.0;	// w.
-		
-		}
-		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
-		}
-		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
-		}
-		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
-		}
-	}
-
-	for(v=0; v < (2*baseVerts -1); v++, j+= floatsPerVertex) {
-		if(v%2==0) {	// position even #'d vertices around bot cap's outer edge
-			diaVerts[j  ] = botRadius * Math.cos(Math.PI*(v)/baseVerts);		// x
-			diaVerts[j+1] = botRadius * Math.sin(Math.PI*(v)/baseVerts);		// y
-			diaVerts[j+2] =-wallHei;	// z
-			diaVerts[j+3] = 1.0;	// w.
-		
-		}
-		else {				// position odd#'d vertices at center of the bottom cap:
-			diaVerts[j  ] = 0.0; 			// x,y,z,w == 0,0,-1,1
-			diaVerts[j+1] = 0.0;	
-			diaVerts[j+2] =-wallHei - 1; 
-			diaVerts[j+3] = 1.0;			// r,g,b = botColr[]
-
-		}
-		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
-		}
-		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
-		}
-		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
-		}
-	}
-	
-}
 
 // Draw the cube
 function drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
