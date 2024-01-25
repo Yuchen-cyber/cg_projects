@@ -24,6 +24,7 @@ var FSHADER_SOURCE_C =
 
 var g_lastMS_c = Date.now();	
 var floatsPerVertex_c = 6;
+
 function main_c() {
   // Retrieve <canvas> element
   var canvas_c = document.getElementById('dog');
@@ -74,30 +75,51 @@ function main_c() {
     timerAll_c();  				// Update all our time-varying params, and
     draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix);  // Draw the robot arm
   };
+
   //------------------------------------
   tick_c(); 
   
 }
 
 var ANGLE_STEP_C = 3.0;    // The increments of rotation angle (degrees)
-
+var body_rotate = 0.0;
 var g_angle0now_c  =   0.0;       // init Current rotation angle, in degrees
 var g_angle0rate_c = -64.0;       // init Rotation angle rate, in degrees/second.
 var g_angle0brake=	 1.0;				// init Speed control; 0=stop, 1=full speed.
-var g_angle0min_c  =-30.0;       // init min, max allowed angle, in degrees.
-var g_angle0max_c  =  30.0;
+var g_angle0min_c  =-35.0;       // init min, max allowed angle, in degrees.
+var g_angle0max_c  =  35.0;
                                 //---------------
 var g_angle1now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle1rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle1brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
-var g_angle1min_c  = -80.0;       // init min, max allowed angle, in degrees
-var g_angle1max_c  =  80.0;
+var g_angle1min_c  = -50.0;       // init min, max allowed angle, in degrees
+var g_angle1max_c  =  50.0;
 
 var g_angle2now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle2rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle2brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle2min_c  = -360.0;       // init min, max allowed angle, in degrees
 var g_angle2max_c  =  360.0;
+
+var g_angle3now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle3rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle3brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle3min_c  = -30.0;       // init min, max allowed angle, in degrees
+var g_angle3max_c  =  30.0;
+
+var g_angle4now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle4rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle4brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle4min_c  = 0.0;       // init min, max allowed angle, in degrees
+var g_angle4max_c  =  90.0;
+//variable for translation
+var x_diff_c = 0.5;
+var transX_c = 0.0;
+var transY_c = 0.0;
+var transZ_c = 0.0;
+var bodyRot = 180.0;
+var state_c = "moving"; // Possible states: "moving", "rotating", "resuming"
+var hasRotated_c = false;
 function timerAll_c() {
   //=============================================================================
   // Find new values for all time-varying parameters used for on-screen drawing.
@@ -120,6 +142,8 @@ function timerAll_c() {
     g_angle0now_c += g_angle0rate_c * g_angle0brake * (elapsedMS * 0.001);	// update.
     g_angle1now_c += g_angle1rate_c * g_angle1brake_c * (elapsedMS * 0.001);
     g_angle2now_c += g_angle2rate_c * g_angle2brake_c * (elapsedMS * 0.001);
+    g_angle3now_c += g_angle3rate_c * g_angle3brake_c * (elapsedMS * 0.001);
+    g_angle4now_c += g_angle4rate_c * g_angle4brake_c * (elapsedMS * 0.001);
     // apply angle limits:  going above max, or below min? reverse direction!
     // (!CAUTION! if max < min, then these limits do nothing...)
     if((g_angle0now_c >= g_angle0max_c && g_angle0rate_c > 0) || // going over max, or
@@ -132,6 +156,14 @@ function timerAll_c() {
     if((g_angle2now_c >= g_angle2max_c && g_angle2rate_c > 0) || // going over max, or
         (g_angle2now_c <= g_angle2min_c && g_angle2rate_c < 0) )	 // going under min ?
         g_angle2rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle3now_c >= g_angle3max_c && g_angle3rate_c > 0) || // going over max, or
+    (g_angle3now_c <= g_angle3min_c && g_angle3rate_c < 0) )	 // going under min ?
+    g_angle3rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle4now_c >= g_angle4max_c && g_angle4rate_c > 0) || // going over max, or
+    (g_angle4now_c <= g_angle4min_c && g_angle4rate_c < 0) )	 // going under min ?
+    g_angle4rate_c *= -1;	// YES: reverse direction.
 
 
     // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
@@ -149,6 +181,52 @@ function timerAll_c() {
     {
       if(     g_angle2now_c < -180.0) g_angle2now_c += 360.0;	// go to >= -180.0 or
       else if(g_angle2now_c >  180.0) g_angle2now_c -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle3min_c > g_angle3max_c)
+    {
+      if(     g_angle3now_c < -180.0) g_angle3now_c += 360.0;	// go to >= -180.0 or
+      else if(g_angle3now_c >  180.0) g_angle3now_c -= 360.0;	// go to <= +180.0
+    }
+
+    //translate
+    if (state_c === "moving") {
+      x_diff_c=0.5;
+      // Continue moving
+      transZ_c += x_diff_c;
+      if (transZ_c >= 10) {
+        // Stop and start rotating
+        body_rotate=0;
+        hasRotated_c = false;
+        state_c = "rotating";
+      }
+    } else if (state_c === "rotating" && !hasRotated_c) {
+      // Rotate
+      x_diff_c = 0;
+      body_rotate += bodyRot * (elapsedMS * 0.001);
+      if(body_rotate >= 360){
+        hasRotated_c = true;
+
+        state_c = "moving";
+
+      }
+      else if (body_rotate >= 180 && transZ_c >=10) {
+        // Finish rotating
+        hasRotated_c = true;
+        state_c = "resuming";
+
+        
+      }
+
+    } else if (state_c === "resuming") {
+      // Resume moving in the opposite direction
+      x_diff_c = 0.5;
+      transZ_c -= x_diff_c;
+      if (transZ_c <= -10.5) {
+        // Reset for next cycle
+        state_c = "rotating";
+        hasRotated_c = false;
+        // body_rotate = 0;
+      }
     }
 
   }
@@ -209,77 +287,7 @@ function initVertexBuffers_c(gl_c) {
     1.5, 0.0, -1.5,ctrColr[0], ctrColr[1], ctrColr[2],-1.5, 0.0, -1.5,topColr[0], topColr[1], topColr[2], -1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2], // Triangle 1
     1.5, 0.0, -1.5,ctrColr[0], ctrColr[1], ctrColr[2],  -1.5, 10.0, -1.5,botColr[0], botColr[1], botColr[2], 1.5, 10.0, -1.5,topColr[0], topColr[1], topColr[2]// Triangle 2
 ]);
-
-  // Normal
-  var normals = new Float32Array([
-    0.0, 0.0, 1.0,  0.0, 0.0, 1.0,  0.0, 0.0, 1.0,  0.0, 0.0, 1.0, // v0-v1-v2-v3 front
-    1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0, // v0-v3-v4-v5 right
-    0.0, 1.0, 0.0,  0.0, 1.0, 0.0,  0.0, 1.0, 0.0,  0.0, 1.0, 0.0, // v0-v5-v6-v1 up
-   -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, // v1-v6-v7-v2 left
-    0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0, // v7-v4-v3-v2 down
-    0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0  // v4-v7-v6-v5 back
-  ]);
   
-
-  // Indices of the vertices
-  // var indices = new Uint8Array([
-  //    0, 1, 2,   0, 2, 3,    // front
-
-  //    4, 5, 6,   4, 6, 7,    // right
-
-  //    8, 9,10,   8,10,11,    // up
-
-  //   12,13,14,  12,14,15,    // left
-
-  //   16,17,18,  16,18,19,    // down
-
-  //   20,21,22,  20,22,23     // back
-
-    
-  // ]);
-  var colors = new Float32Array([
-    // Face 1 (Red)
-    1.0, 0.0, 0.0, 1.0,   1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
-    1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
-
-    // Face 2 (Green)
-    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
-    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
-
-    // Face 3 (Blue)
-    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
-    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
-
-    // Face 4 (Yellow)
-    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
-    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
-
-    // Face 5 (Magenta)
-    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
-    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
-
-    // Face 6 (Cyan)
-    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,
-    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0
-]);
-  // Write the vertex property to buffers (coordinates and normals)
-  // if (!initArrayBuffer_c(gl_c, 'a_Position', vertices, gl_c.FLOAT, 3)) return -1; // Initialize color buffer
-  // if (!initArrayBuffer_c(gl_c, 'a_Normal', normals, gl_c.FLOAT, 3)) return -1;
-  // g_caseBuffer = initArrayBufferForLaterUse_c(gl_c, vertices_case, 3, gl_c.FLOAT);
-  // if (!g_caseBuffer) return -1;
-
-  // Unbind the buffer object
-  // gl_c.bindBuffer(gl_c.ARRAY_BUFFER, null);
-
-  // // Write the indices to the buffer object
-  // var indexBuffer = gl_c.createBuffer();
-  // if (!indexBuffer) {
-  //   console.log('Failed to create the buffer object');
-  //   return -1;
-  // }
-
-  // gl_c.bindBuffer(gl_c.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  // gl_c.bufferData(gl_c.ELEMENT_ARRAY_BUFFER, vertices, gl_c.STATIC_DRAW);
   var shapeBufferHandle = gl_c.createBuffer();  
 	if (!shapeBufferHandle) {
 	console.log('Failed to create the shape buffer object');
@@ -385,10 +393,11 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   // Draw a base
   var baseHeight = 2.0;
   g_modelMatrix_c.setTranslate(0.0, -1.0, 0.0);
-  g_modelMatrix_c.translate(-0.1, 0,0);	
+  g_modelMatrix_c.translate(transX_c, transY_c,transZ_c);	
+  g_modelMatrix_c.scale(0.8, 0.8, 0.8);
   pushMatrix(g_modelMatrix_c);
   g_modelMatrix_c.scale(1, 1.0, 1); // Make it a little thicker
-  g_modelMatrix_c.rotate(g_angle2now_c, 0.0, 1.0, 0.0);
+  g_modelMatrix_c.rotate(body_rotate, 0.0, 1.0, 0.0);
   drawBox_c(gl_c, n,viewProjMatrix_c,u_MvpMatrix);
   var arm1Length = 10.0; // Length of arm1
   g_modelMatrix_c.translate(0,arm1Length, 0,0);	
@@ -398,6 +407,13 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   //Arm1
   g_modelMatrix_c.translate(-2.2, 0, 0.0); 　　　// Move to joint1
   g_modelMatrix_c.rotate(g_angle1now_c, 1.0, 0.0, 0.0);  
+  pushMatrix(g_modelMatrix_c);
+  g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
+  drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+  
+  g_modelMatrix_c = popMatrix();
+  g_modelMatrix_c.translate(0, -5, 0.0); 　　　// Move to joint1
+  g_modelMatrix_c.rotate(-g_angle4now_c, 1.0, 0.0, 0.0);  
   g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
 
@@ -406,8 +422,15 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   // Arm2
   g_modelMatrix_c.translate(2.2, 0, 0.0);
   g_modelMatrix_c.rotate(-g_angle1now_c, 1.0, 0.0, 0.0);    // Rotate around the y-axis
+  pushMatrix(g_modelMatrix_c);
   g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+  g_modelMatrix_c = popMatrix();
+  g_modelMatrix_c.translate(0, -5, 0.0); 　　　// Move to joint1
+  g_modelMatrix_c.rotate(-g_angle4now_c, 1.0, 0.0, 0.0);  
+  g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
+  drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+
   g_modelMatrix_c = popMatrix();
 
   g_modelMatrix_c.translate(0, -arm1Length, 0.0); 
@@ -418,32 +441,41 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   
   g_modelMatrix_c.translate(-2, 0, 0.0); 　　　// Move to joint1
   g_modelMatrix_c.rotate(-g_angle1now_c, 1.0, 0.0, 0.0);  
+  pushMatrix(g_modelMatrix_c);
   g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+  //lowleg1
+  g_modelMatrix_c = popMatrix();
+  g_modelMatrix_c.translate(0, -5, 0.0); 　　　// Move to joint1
+  g_modelMatrix_c.rotate(g_angle3now_c, 1.0, 0.0, 0.0);  
+  g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
+  drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+  
 
   g_modelMatrix_c = popMatrix();
   pushMatrix(g_modelMatrix_c);
   // Leg2
   g_modelMatrix_c.translate(2, 0, 0.0);
   g_modelMatrix_c.rotate(g_angle1now_c, 1.0, 0.0, 0.0);    // Rotate around the y-axis
+  pushMatrix(g_modelMatrix_c);
   g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
-
+  //lowerLeg2
+  g_modelMatrix_c = popMatrix();
+  g_modelMatrix_c.translate(0, -5, 0.0); 　　　// Move to joint1
+  g_modelMatrix_c.rotate(-g_angle3now_c, 1.0, 0.0, 0.0);  
+  g_modelMatrix_c.scale(0.5, -0.5, 0.5); // Make it a little thicker
+  drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
+  //neck
   g_modelMatrix_c = popMatrix();
   g_modelMatrix_c.translate(0, arm1Length, 0.0);
   g_modelMatrix_c.scale(0.2, 0.1, 0.2); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
-
+  //head
   g_modelMatrix_c.translate(0, arm1Length, 0.0);
   g_modelMatrix_c.rotate(g_angle0now_c, 0.0, 1.0, 0.0); 
   g_modelMatrix_c.scale(4, 2, 4); // Make it a little thicker
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); // Draw
-
-
-
-
-
-
 }
 
 
@@ -465,13 +497,13 @@ function A0_runStop_c() {
   //==============================================================================
     if(g_angle0brake > 0.5)	// if running,
     {
-      g_angle0brake = 0.0;	// stop, and change button label:
-      document.getElementById("A0button").value="Angle 0 OFF";
+      g_angle0brake_c = 0.0;	// stop, and change button label:
+      document.getElementById("A0button_c").value="Angle 0 OFF";
     }
     else 
     {
-      g_angle0brake = 1.0;	// Otherwise, go.
-      document.getElementById("A0button").value="Angle 0 ON";
+      g_angle0brake_c= 1.0;	// Otherwise, go.
+      document.getElementById("A0button_c").value="Angle 0 ON";
     }
   }
   
@@ -480,12 +512,12 @@ function A0_runStop_c() {
     if(g_angle1brake_c > 0.5)	// if running,
     {
       g_angle1brake_c = 0.0;	// stop, and change button label:
-      document.getElementById("A1button").value="Angle 1 OFF";
+      document.getElementById("A1button_c").value="Angle 1 OFF";
     }
     else 
     {
       g_angle1brake_c = 1.0;	// Otherwise, go.
-      document.getElementById("A1button").value="Angle 1 ON";
+      document.getElementById("A1button_c").value="Angle 1 ON";
     }
   }
 
@@ -494,11 +526,11 @@ function A0_runStop_c() {
       if(g_angle2brake_c > 0.5)	// if running,
       {
         g_angle2brake_c = 0.0;	// stop, and change button label:
-        document.getElementById("A2button").value="Angle 2 OFF";
+        document.getElementById("A2button_c").value="Angle 2 OFF";
       }
       else 
       {
         g_angle2brake_c = 1.0;	// Otherwise, go.
-        document.getElementById("A2button").value="Angle 2 ON";
+        document.getElementById("A2button_c").value="Angle 2 ON";
       }
     }

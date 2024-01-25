@@ -34,6 +34,7 @@ var transX = 0.0;
 var transY = 0.0;
 var transZ = 0.0;
 var canvas = document.getElementById('parts');
+var currentAngle = 0.0;
 function main() {
 //==============================================================================
 	// Retrieve <canvas> element
@@ -76,8 +77,6 @@ function main() {
 	// Create a local version of our model matrix in JavaScript 
 	var modelMatrix = new Matrix4();
 	
-	// Create, init current rotation angle value in JavaScript
-	var currentAngle = 0.0;
 	// user interaction
 
 	// MOUSE:
@@ -484,21 +483,6 @@ gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
 gl.drawArrays(gl.TRIANGLE_STRIP,				// use this drawing primitive, and
 	 diaStart/floatsPerVertex, // start at this vertex number, and
 	 diaVerts.length/floatsPerVertex);	// draw this many vertices.
-
-  
-
-// 	//---------Draw Ground Plane, WITHOUT spinning.
-// 	// position it;  *SET* translate() discards all previous matrix content.
-// 	modelMatrix.setTranslate( 0.0, 0.0, 0.0);	
-// 	modelMatrix.scale(0.05, 0.05, 0.05);				// shrink!
-// //	modelMatrix.rotate(-60.0, 1,0,0 );
-// 	// Drawing:
-// 	// Pass our current matrix to the vertex shaders:
-//   gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-//   // Draw just the ground-plane's vertices
-//   gl.drawArrays(gl.LINES, 								// use this drawing primitive, and
-//   						  gndStart/floatsPerVertex,	// start at this vertex number, and
-//   						  gndVerts.length/floatsPerVertex);	// draw this many vertices.
 	
 }
 
@@ -506,13 +490,7 @@ gl.drawArrays(gl.TRIANGLE_STRIP,				// use this drawing primitive, and
 //===================Mouse and Keyboard event-handling Callbacks
 
 function myMouseDown(ev) {
-	//==============================================================================
-	// Called when user PRESSES down any mouse button;
-	// 									(Which button?    console.log('ev.button='+ev.button);   )
-	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
-	
-	// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+
 	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
 	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
 	  var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
@@ -535,11 +513,7 @@ function myMouseDown(ev) {
 	
 	
 	function myMouseMove(ev) {
-	//==============================================================================
-	// Called when user MOVES the mouse with a button already pressed down.
-	// 									(Which button?   console.log('ev.button='+ev.button);    )
-	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+
 	
 		if(g_isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
 	
@@ -573,13 +547,6 @@ function myMouseDown(ev) {
 	};
 	
 	function myMouseUp(ev) {
-	//==============================================================================
-	// Called when user RELEASES mouse button pressed previously.
-	// 									(Which button?   console.log('ev.button='+ev.button);    )
-	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
-	
-	// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
 	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
 	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
 		var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
@@ -604,31 +571,20 @@ function myMouseDown(ev) {
 	};
 	
 	function myMouseClick(ev) {
-	//=============================================================================
-	// Called when user completes a mouse-button single-click event 
-	// (e.g. mouse-button pressed down, then released)
-	// 									   
-	//    WHICH button? try:  console.log('ev.button='+ev.button); 
-	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
-	//    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
-	
-	  // STUB
+
 		console.log("myMouseClick() on button: ", ev.button); 
 	}	
 	
 	function myMouseDblClick(ev) {
-	//=============================================================================
-	// Called when user completes a mouse-button double-click event 
-	// 									   
-	//    WHICH button? try:  console.log('ev.button='+ev.button); 
-	// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
-	//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
-	//    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
-	
-	  // STUB
 		console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
 	}
+	function angleSubmit() {
+
+			var UsrTxt = document.getElementById('usrAngle').value;	
+		  document.getElementById('EditBoxOut').innerHTML ='You Typed: '+UsrTxt;
+		  console.log('angleSubmit: UsrTxt:', UsrTxt); // print in console, and
+		  currentAngle = parseFloat(UsrTxt);     // convert string to float number 
+		};
 // Last time that this function was called:  (used for animation timing)
 var g_last = Date.now();
 var x_diff = 0.01;
