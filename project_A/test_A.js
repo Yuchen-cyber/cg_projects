@@ -35,13 +35,19 @@ var transY = 0.0;
 var transZ = 0.0;
 var canvas = document.getElementById('parts');
 var currentAngle = 0.0;
+
+//color section
+var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
+var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
+var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
+var gl = getWebGLContext(canvas);
 function main() {
 //==============================================================================
 	// Retrieve <canvas> element
 	
 
 	// Get the rendering context for WebGL
-	var gl = getWebGLContext(canvas);
+	
 	if (!gl) {
 	console.log('Failed to get the rendering context for WebGL');
 	return;
@@ -90,13 +96,12 @@ function main() {
 	window.addEventListener("dblclick", myMouseDblClick); 
 	
 //-----------------  
-
+	document.onkeydown = function(ev){ keydown(ev, gl, n, modelMatrix, u_ModelMatrix ); };
 	// Start drawing: create 'tick' variable whose value is this function:
 	var tick = function() {
 	currentAngle = animate(currentAngle);  // Update the rotation angle
 	draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix);   // Draw shapes
 	// report current angle on console
-	//console.log('currentAngle=',currentAngle);
 	document.getElementById('Mouse').innerHTML=
 			'Mouse Drag totals (CVV coords):\t'+
 			g_xMdragTot.toFixed(g_digits)+', \t'+g_yMdragTot.toFixed(g_digits);	
@@ -203,10 +208,6 @@ function initVertexBuffer(gl) {
 function makeDiamond() {
 	//==============================================================================
 	// Make a diamond-like shape from two adjacent tetrahedra, aligned with Z axis.
-
-	var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
-	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
-	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
 	var baseVerts = 6; // number of vertices for the base square
 	diaVerts = new Float32Array(  ((baseVerts*8)) * floatsPerVertex);
 	var topRadius = 0.8;
@@ -318,9 +319,6 @@ function makeDiamond() {
 
 function makeEgg() {
 	//==============================================================================
-	var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
-	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
-	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
 	var slices = 7;		// # of slices of the sphere along the z axis. >=3 req'd
 	// (choose odd # or prime# to avoid accidental symmetry)
 	var sliceVerts	= 27;	// # of vertices around the top edge of the slice
@@ -360,20 +358,13 @@ function makeEgg() {
 		sinTop = Math.sin((-Math.PI/2) +(s+1)*sliceAngle);
 		for(v=isFirstSlice;    v< 2*sliceVerts-isLastSlice;   v++,j+=floatsPerVertex)
 		{						// for each vertex of this slice,
-			if(v%2 ==0) { // put vertices with even-numbered v at slice's bottom edge;
-										// by circling CCW along longitude (east-west) angle 'theta':
-										// (0 <= theta < 360deg, increases 'eastward' on sphere).
-										// x,y,z,w == cos(theta),sin(theta), 1.0, 1.0
-										// where			theta = 2*PI*(v/2)/capVerts = PI*v/capVerts
+			if(v%2 ==0) { 
 				eggVerts[j  ] = topR * cosBot * Math.cos(Math.PI * v/sliceVerts);	// x
 				eggVerts[j+1] = topR * cosBot * Math.sin(Math.PI * v/sliceVerts);	// y
 				eggVerts[j+2] = sinBot;																			// z
 				eggVerts[j+3] = 1.0;																				// w.				
 			}
-			else {	// put vertices with odd-numbered v at the the slice's top edge
-							// (why PI and not 2*PI? because 0 <= v < 2*sliceVerts
-							// and thus we can simplify cos(2*PI* ((v-1)/2)*sliceVerts)
-							// (why (v-1)? because we want longitude angle 0 for vertex 1).  
+			else {	
 				eggVerts[j  ] = topR * cosTop * Math.cos(Math.PI * (v-1)/sliceVerts); 	// x
 				eggVerts[j+1] = topR * cosTop * Math.sin(Math.PI * (v-1)/sliceVerts);	// y
 				eggVerts[j+2] = sinTop;		// z
@@ -405,10 +396,10 @@ function makeEgg() {
 	{						
 		if(v%2 ==0) { 
 
-			eggVerts[j  ] = topR * cosBot * Math.cos(Math.PI * v/sliceVerts);	// x
-			eggVerts[j+1] = topR * cosBot * Math.sin(Math.PI * v/sliceVerts);	// y
-			eggVerts[j+2] = sinBot;																			// z
-			eggVerts[j+3] = 1.0;																				// w.				
+			eggVerts[j  ] = topR * cosBot * Math.cos(Math.PI * v/sliceVerts);	
+			eggVerts[j+1] = topR * cosBot * Math.sin(Math.PI * v/sliceVerts);	
+			eggVerts[j+2] = sinBot;																		
+			eggVerts[j+3] = 1.0;																							
 		}
 		else {
  
@@ -529,9 +520,7 @@ function myMouseDown(ev) {
 		var y = (yp - canvas.height/2) /		//										-1 <= y < +1.
 								 (canvas.height/2);
 	
-	//	console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
-	
-		// find how far we dragged the mouse:
+
 		g_xMdragTot += (x - g_xMclik);			// Accumulate change-in-mouse-position,&
 		g_yMdragTot += (y - g_yMclik);
 		// Report new mouse position & how far we moved on webpage:
@@ -585,6 +574,48 @@ function myMouseDown(ev) {
 		  console.log('angleSubmit: UsrTxt:', UsrTxt); // print in console, and
 		  currentAngle = parseFloat(UsrTxt);     // convert string to float number 
 		};
+	function keydown(ev, gl, n, modelMatrix, u_ModelMatrix) {
+		switch (ev.keyCode) {
+			case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
+			spinUp()
+			break;
+			case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
+			spinDown()
+			break;
+			default: return; // Skip drawing at no effective action
+		}
+		// Draw the robot arm
+		draw(gl, n,currentAngle, modelMatrix, u_ModelMatrix);
+		}
+		function updateCtrColor() {
+			var hexColor = document.getElementById('ctrColorPicker').value;
+			var rgb = hexToRGB(hexColor);
+			ctrColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
+			initVertexBuffer(gl);
+		  }
+		  
+		  function updateTopColor() {
+			var hexColor = document.getElementById('topColorPicker').value;
+			var rgb = hexToRGB(hexColor);
+			topColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
+			initVertexBuffer(gl);
+		  }
+		  
+		  function updateBotColor() {
+			var hexColor = document.getElementById('botColorPicker').value;
+			var rgb = hexToRGB(hexColor);
+			botColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
+			initVertexBuffer(gl);
+		  }
+		
+		function hexToRGB(hex) {
+		var r = parseInt(hex.slice(1, 3), 16);
+		var g = parseInt(hex.slice(3, 5), 16);
+		var b = parseInt(hex.slice(5, 7), 16);
+		return { r, g, b };
+		}
+		  
+
 // Last time that this function was called:  (used for animation timing)
 var g_last = Date.now();
 var x_diff = 0.01;

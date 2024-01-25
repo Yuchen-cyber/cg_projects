@@ -65,8 +65,6 @@ function main_b() {
   viewProjMatrix_b.setPerspective(50.0, canvas_b.width / canvas_b.height, 1.0, 100.0);
   viewProjMatrix_b.lookAt(20.0, 10.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
-  // Register the event handler to be called when keys are pressed
-  document.onkeydown = function(ev){ keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix ); };
   var tick = function() {		    // locally (within main() only), define our 
     // self-calling animation function. 
     requestAnimationFrame(tick, gl_b); // browser callback request; wait
@@ -151,25 +149,6 @@ function timerAll() {
     }
 
   }
-function keydown(ev, gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
-  switch (ev.keyCode) {
-    case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
-      if (g_joint1Angle < 135.0) g_joint1Angle += ANGLE_STEP_B;
-      break;
-    case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
-      if (g_joint1Angle > -135.0) g_joint1Angle -= ANGLE_STEP_B;
-      break;
-    case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-      g_arm1Angle = (g_arm1Angle + ANGLE_STEP_B) % 360;
-      break;
-    case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-      g_arm1Angle = (g_arm1Angle - ANGLE_STEP_B) % 360;
-      break;
-    default: return; // Skip drawing at no effective action
-  }
-  // Draw the robot arm
-  draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix);
-}
 
 function initVertexBuffers_b(gl_b) {
   var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink

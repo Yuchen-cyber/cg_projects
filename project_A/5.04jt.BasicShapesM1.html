@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Basic ShapesM1</title>
+    <title>ProjectA</title>
+	<style>
+        .color-picker-row {
+            display: flex; /* Aligns child containers in a row */
+            align-items: center; /* Aligns items vertically in the center */
+        }
+    </style>
   </head>
 	<!--	Create the HTML5 'canvas' element in which we will run WebGL
 	-->
@@ -21,10 +27,21 @@
 	-->
 	  <p>
 	<div id= ShapeName></div> 
-
+	<b>---------------------Keyboard Section ----------</b>
+		
+		<br>
+		<b>You can press right key(->) on keyboard to spin up</b>
+		<br>
+		<b>You can press left key(<-) on keyboard to spin down</b>
+		<br>
+		<b>Or you can click the buttons below</b>
+		<br>
       <button type="button" onclick="spinDown()">Spin << </button>
 	  <button type="button" onclick="runStop()">Run/Stop</button>
       <button type="button" onclick="spinUp()">Spin >> </button>
+	  <br>
+	  <b>---------------------Mouse Drag Section ----------</b>
+		
 		<br>
 		<b>drag the mouse to rotate the 3d object on the top 
 			</b>
@@ -36,6 +53,8 @@
 		<br>
 		<span id='MouseDragResult'> Mouse Drag: </span> <!-- myMouseUp() modifies this span object -->
 		<div id='Mouse'> Mouse Drag totals (CVV coords) </div>
+		<b>---------------------Input Section ----------</b>
+		<br>
 		<b>the submitted angle will change the current angle of two 3D obejects 
 		</b>
 		<br>
@@ -47,6 +66,24 @@
 	--><input id='usrAngle' size=10> 
 		<button type="button" onClick='angleSubmit()'>Submit</button><BR> 
 		<div id= EditBoxOut></div>
+		<b>---------------------Color Section ----------</b>
+		<p>Select Color: Click the box to change the color,</p>
+		<p>the color below the box is the original color</p>
+		<div class="color-picker-row">
+			<div >
+				<input id="ctrColorPicker" type="color" value="#ECA5D7" onchange="updateCtrColor()">
+				<div style="width:50px; height: 50px; background-color: #ECA5D7;"></div>
+			</div>
+			<div >
+				<input id="topColorPicker" type="color" value="#A0E8DA" onchange="updateTopColor()">
+				<div style="width:50px; height: 50px; background-color: #A0E8DA;"></div>
+			</div>
+			<div >
+				<input id="botColorPicker" type="color" value="#EFE89D" onchange="updateBotColor()">
+				<div style="width:50px; height: 50px; background-color: #EFE89D;"></div>
+			</div>
+		</div>
+
     </p>
 	</div>
 

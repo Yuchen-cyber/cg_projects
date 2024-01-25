@@ -66,8 +66,6 @@ function main_c() {
   viewProjMatrix_c.setPerspective(50.0, canvas_c.width / canvas_c.height, 1.0, 100.0);
   viewProjMatrix_c.lookAt(20.0, 10.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
-  // Register the event handler to be called when keys are pressed
-  document.onkeydown_c = function(ev){ keydown_c(ev, gl_c, n, viewProjMatrix_c, u_MvpMatrix ); };
   var tick_c = function() {		    // locally (within main() only), define our 
     // self-calling animation function. 
     requestAnimationFrame(tick_c, gl_c); // browser callback request; wait
@@ -230,38 +228,13 @@ function timerAll_c() {
     }
 
   }
-function keydown_c(ev, gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
-  switch (ev.keyCode) {
-    case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
-      if (g_joint1Angle < 135.0) g_joint1Angle += ANGLE_STEP_C;
-      break;
-    case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
-      if (g_joint1Angle > -135.0) g_joint1Angle -= ANGLE_STEP_C;
-      break;
-    case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-      g_arm1Angle = (g_arm1Angle + ANGLE_STEP_C) % 360;
-      break;
-    case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-      g_arm1Angle = (g_arm1Angle - ANGLE_STEP_C) % 360;
-      break;
-    default: return; // Skip drawing at no effective action
-  }
-  // Draw the robot arm
-  draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix);
-}
+
 
 function initVertexBuffers_c(gl_c) {
   var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
 	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
 	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
-  // var vertices = new Float32Array([
-  //   1.5, 10.0, 1.5, -1.5, 10.0, 1.5, -1.5,  0.0, 1.5,  1.5,  0.0, 1.5, // v0-v1-v2-v3 front
-  //   1.5, 10.0, 1.5,  1.5,  0.0, 1.5,  1.5,  0.0,-1.5,  1.5, 10.0,-1.5, // v0-v3-v4-v5 right
-  //   1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0,-1.5, -1.5, 10.0, 1.5, // v0-v5-v6-v1 up
-  //  -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5, -1.5,  0.0, 1.5, // v1-v6-v7-v2 left
-  //  -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5, -1.5,  0.0, 1.5, // v7-v4-v3-v2 down
-  //   1.5,  0.0,-1.5, -1.5,  0.0,-1.5, -1.5, 10.0,-1.5,  1.5, 10.0,-1.5  // v4-v7-v6-v5 back
-  // ]);
+
   var vertices = new Float32Array([
     // Front face
     1.5, 10.0, 1.5,ctrColr[0], ctrColr[1], ctrColr[2], -1.5, 10.0, 1.5, topColr[0], topColr[1], topColr[2], -1.5, 0.0, 1.5,botColr[0], botColr[1], botColr[2], // Triangle 1
