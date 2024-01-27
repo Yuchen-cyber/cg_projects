@@ -567,13 +567,7 @@ function myMouseDown(ev) {
 	function myMouseDblClick(ev) {
 		console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
 	}
-	function angleSubmit() {
 
-			var UsrTxt = document.getElementById('usrAngle').value;	
-		  document.getElementById('EditBoxOut').innerHTML ='You Typed: '+UsrTxt;
-		  console.log('angleSubmit: UsrTxt:', UsrTxt); // print in console, and
-		  currentAngle = parseFloat(UsrTxt);     // convert string to float number 
-		};
 	function keydown(ev, gl, n, modelMatrix, u_ModelMatrix) {
 		switch (ev.keyCode) {
 			case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis

@@ -154,14 +154,7 @@ function initVertexBuffers_b(gl_b) {
   var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
 	var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
 	var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
-  // var vertices = new Float32Array([
-  //   1.5, 10.0, 1.5, -1.5, 10.0, 1.5, -1.5,  0.0, 1.5,  1.5,  0.0, 1.5, // v0-v1-v2-v3 front
-  //   1.5, 10.0, 1.5,  1.5,  0.0, 1.5,  1.5,  0.0,-1.5,  1.5, 10.0,-1.5, // v0-v3-v4-v5 right
-  //   1.5, 10.0, 1.5,  1.5, 10.0,-1.5, -1.5, 10.0,-1.5, -1.5, 10.0, 1.5, // v0-v5-v6-v1 up
-  //  -1.5, 10.0, 1.5, -1.5, 10.0,-1.5, -1.5,  0.0,-1.5, -1.5,  0.0, 1.5, // v1-v6-v7-v2 left
-  //  -1.5,  0.0,-1.5,  1.5,  0.0,-1.5,  1.5,  0.0, 1.5, -1.5,  0.0, 1.5, // v7-v4-v3-v2 down
-  //   1.5,  0.0,-1.5, -1.5,  0.0,-1.5, -1.5, 10.0,-1.5,  1.5, 10.0,-1.5  // v4-v7-v6-v5 back
-  // ]);
+
   var vertices = new Float32Array([
     // Front face
     1.5, 10.0, 1.5,ctrColr[0], ctrColr[1], ctrColr[2], -1.5, 10.0, 1.5, topColr[0], topColr[1], topColr[2], -1.5, 0.0, 1.5,botColr[0], botColr[1], botColr[2], // Triangle 1
@@ -199,65 +192,7 @@ function initVertexBuffers_b(gl_b) {
   ]);
   
 
-  // Indices of the vertices
-  // var indices = new Uint8Array([
-  //    0, 1, 2,   0, 2, 3,    // front
 
-  //    4, 5, 6,   4, 6, 7,    // right
-
-  //    8, 9,10,   8,10,11,    // up
-
-  //   12,13,14,  12,14,15,    // left
-
-  //   16,17,18,  16,18,19,    // down
-
-  //   20,21,22,  20,22,23     // back
-
-    
-  // ]);
-  var colors = new Float32Array([
-    // Face 1 (Red)
-    1.0, 0.0, 0.0, 1.0,   1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
-    1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0,  1.0, 0.0, 0.0, 1.0, 
-
-    // Face 2 (Green)
-    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
-    0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0,  0.0, 1.0, 0.0, 1.0, 
-
-    // Face 3 (Blue)
-    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
-    0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0,  0.0, 0.0, 1.0, 1.0, 
-
-    // Face 4 (Yellow)
-    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
-    1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,  1.0, 1.0, 0.0, 1.0,
-
-    // Face 5 (Magenta)
-    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
-    1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,  1.0, 0.0, 1.0, 1.0,
-
-    // Face 6 (Cyan)
-    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,
-    0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0,  0.0, 1.0, 1.0, 1.0
-]);
-  // Write the vertex property to buffers (coordinates and normals)
-  // if (!initArrayBuffer_b(gl_b, 'a_Position', vertices, gl_b.FLOAT, 3)) return -1; // Initialize color buffer
-  // if (!initArrayBuffer_b(gl_b, 'a_Normal', normals, gl_b.FLOAT, 3)) return -1;
-  // g_baseBuffer = initArrayBufferForLaterUse(gl_b, vertices_base, 3, gl_b.FLOAT);
-  // if (!g_baseBuffer) return -1;
-
-  // Unbind the buffer object
-  // gl_b.bindBuffer(gl_b.ARRAY_BUFFER, null);
-
-  // // Write the indices to the buffer object
-  // var indexBuffer = gl_b.createBuffer();
-  // if (!indexBuffer) {
-  //   console.log('Failed to create the buffer object');
-  //   return -1;
-  // }
-
-  // gl_b.bindBuffer(gl_b.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  // gl_b.bufferData(gl_b.ELEMENT_ARRAY_BUFFER, vertices, gl_b.STATIC_DRAW);
   var shapeBufferHandle = gl_b.createBuffer();  
 	if (!shapeBufferHandle) {
 	console.log('Failed to create the shape buffer object');
@@ -407,6 +342,20 @@ function drawBox(gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
 
   // gl_b.drawArrays(gl_b.TRIANGLES, 2, 36/floatsPerVertex_b);
 }
+
+function angleSubmit() {
+
+  var UsrTxt = document.getElementById('usrAngle').value;	
+  
+  var angle = parseFloat(UsrTxt);
+  if (angle <= g_angle1max && angle >= g_angle1min){
+    g_angle1now = parseFloat(UsrTxt);     
+    document.getElementById('EditBoxOut').innerHTML ='You Typed: '+UsrTxt;
+  }else{
+    document.getElementById('EditBoxOut').innerHTML ='Sorry, exceed the range of this angle';
+  }
+  
+};
 
 function A0_runStop() {
   //==============================================================================
