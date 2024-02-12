@@ -65,11 +65,125 @@ function main() {
     return;
   }
   document.onkeydown = function(ev){ keydown(ev, gl_c, n, g_modelMatrix_b, u_MvpMatrix ); };
-    
+  canvas_c.onmousedown	=	function(ev){myMouseDown( ev, gl_c, canvas_c) }; 
+  					// when user's mouse button goes down, call mouseDown() function
+  canvas_c.onmousemove = 	function(ev){myMouseMove( ev, gl_c, canvas_c) };
+											// when the mouse moves, call mouseMove() function					
+  canvas_c.onmouseup = 		function(ev){myMouseUp(   ev, gl_c, canvas_c)};
     
   drawResize();
   
 }
+var isDrag=false;		// mouse-drag: true when user holds down mouse button
+var xMclik=0.0;			// last mouse button-down position (in CVV coords)
+var yMclik=0.0;   
+var xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
+var yMdragTot=0.0; 
+
+var qNew = new Quaternion(0,0,0,1); // most-recent mouse drag's rotation
+var qTot = new Quaternion(0,0,0,1);	// 'current' orientation (made from qNew)
+var quatMatrix = new Matrix4();	
+function myMouseDown(ev, gl, canvas) {
+  
+  // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+    var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+    var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+    var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+  //  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
+    
+    // Convert to Canonical View Volume (CVV) coordinates too:
+    var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                 (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+    var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                 (canvas.height/2);
+  //	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+    
+    isDrag = true;											// set our mouse-dragging flag
+    xMclik = x;													// record where mouse-dragging began
+    yMclik = y;
+  };
+
+  function myMouseMove(ev, gl, canvas) {    
+      if(isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
+    
+      // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+      var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+      var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+      var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+    //  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+      
+      // Convert to Canonical View Volume (CVV) coordinates too:
+      var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                   (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+      var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                   (canvas.height/2);
+    
+      // find how far we dragged the mouse:
+      xMdragTot += (x - xMclik);					// Accumulate change-in-mouse-position,&
+      yMdragTot += (y - yMclik);
+      // AND use any mouse-dragging we found to update quaternions qNew and qTot.
+      dragQuat(x - xMclik, y - yMclik);
+      
+      xMclik = x;													// Make NEXT drag-measurement from here.
+      yMclik = y;
+      
+      // Show it on our webpage, in the <div> element named 'MouseText':
+      document.getElementById('MouseText').innerHTML=
+          'Mouse Drag totals (CVV x,y coords):\t'+
+           xMdragTot.toFixed(5)+', \t'+
+           yMdragTot.toFixed(5);	
+    };
+  function myMouseUp(ev, gl, canvas) {
+    // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+      var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+      var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+      var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+    //  console.log('myMouseUp  (pixel coords): xp,yp=\t',xp,',\t',yp);
+      
+      // Convert to Canonical View Volume (CVV) coordinates too:
+      var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                    (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+      var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                    (canvas.height/2);
+    //	console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
+      
+      isDrag = false;											// CLEAR our mouse-dragging flag, and
+      // accumulate any final bit of mouse-dragging we did:
+      xMdragTot += (x - xMclik);
+      yMdragTot += (y - yMclik);
+    //	console.log('myMouseUp: xMdragTot,yMdragTot =',xMdragTot,',\t',yMdragTot);
+    
+      // AND use any mouse-dragging we found to update quaternions qNew and qTot;
+      dragQuat(x - xMclik, y - yMclik);
+    
+      // Show it on our webpage, in the <div> element named 'MouseText':
+      document.getElementById('MouseText').innerHTML=
+          'Mouse Drag totals (CVV x,y coords):\t'+
+            xMdragTot.toFixed(5)+', \t'+
+            yMdragTot.toFixed(5);	
+    };
+
+  function dragQuat(xdrag, ydrag) {
+
+      var res = 5;
+      var qTmp = new Quaternion(0,0,0,1);
+      
+      var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
+      
+      qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
+
+                  
+      qTmp.multiply(qNew,qTot);			// apply new rotation to current rotation. 
+
+      qTot.copy(qTmp);
+      // show the new quaternion qTot on our webpage in the <div> element 'QuatValue'
+      document.getElementById('QuatValue').innerHTML= 
+                                  '\t X=' +qTot.x.toFixed(res)+
+                                'i\t Y=' +qTot.y.toFixed(res)+
+                                'j\t Z=' +qTot.z.toFixed(res)+
+                                'k\t W=' +qTot.w.toFixed(res)+
+                                '<br>length='+qTot.length().toFixed(res);
+    };
 
 var ANGLE_STEP_C = 3.0;    // The increments of rotation angle (degrees)
 var body_rotate = 0.0;
@@ -599,16 +713,19 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   g_modelMatrix_b.scale(4, 2, 4); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
 
+  //3d objects
+  
   g_modelMatrix_b = popMatrix();
+  g_modelMatrix_b = popMatrix();
+  g_modelMatrix_b = popMatrix();
+  
   pushMatrix(g_modelMatrix_b);
-    g_modelMatrix_b.translate(2, 0, 0.0);
-                g_modelMatrix_b.scale(1,1,-1);							// convert to left-handed coord sys
-                                            // to match WebGL display canvas.
-                                            g_modelMatrix_b.scale(0.3, 0.3, 0.3);
-                // Make it smaller:
-                g_modelMatrix_b.rotate(90, 1, 1, 0);  // Spin on XY diagonal axis
-
-  drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, dia_start/floatsPerVertex, diaVerts.length/floatsPerVertex); // Draw   
+    g_modelMatrix_b.translate(20, 0, 0.0);
+    quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w);	// Quaternion-->Matrix
+	  g_modelMatrix_b.concat(quatMatrix);	
+    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+    drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+                
   
   
 }
