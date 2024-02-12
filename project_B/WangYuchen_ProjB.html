@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" >
+    <title>ProjectB</title>
+
+  </head>
+	<!--	Create the HTML5 'canvas' element in which we will run WebGL
+	-->
+	
+	<body onload="main()" onresize="drawResize()">
+	
+	<div >
+
+		<b>3D Assemblies:walking robots</b>
+		<p></p>
+		<canvas id="dog" width="400" height="400" >
+			Please use a browser that supports "canvas"
+		</canvas>
+		<p></p>
+		<br>
+		<b>---------------------Keyboard Section ----------</b>
+		
+		<br>
+		<b>You can press 'D' key on keyboard to turn the camera head to right</b>
+		<br>
+		<b>You can press 'A' key on keyboard to turn the camera head to left</b>
+		<br>
+		<br>
+		<br>
+
+
+	</div>
+
+	
+
+
+
+
+	
+	
+	<!--	Load in the JavaScript libraries supplied by our textbook 
+			(Matsuda et al., 2013 WebGL Programming Guide) that help us
+			with WebGL programming:
+	-->
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix-quat03.js"></script>
+	<!--	Finally, load in our own JavaScript program file.
+	-->
+    <script src="WangYuchen_ProjectB_Walking_Robot.js"></script>
+
+  </body>
+</html>

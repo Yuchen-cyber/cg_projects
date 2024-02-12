@@ -297,7 +297,6 @@ function draw_b(gl_b, n, viewProjMatrix_b, u_MvpMatrix) {
   gl_b.clear(gl_b.COLOR_BUFFER_BIT | gl_b.DEPTH_BUFFER_BIT);
   // Draw a base
   var baseHeight = 2.0;
-
   g_modelMatrix_b.setTranslate(0.0, -12.0, 0.0);
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(2.5, 0.1, 2.5); // Make it a little thicker
