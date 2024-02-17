@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" >
     <title>ProjectB</title>
+	<style>
+
+
+    </style>
 
   </head>
 	<!--	Create the HTML5 'canvas' element in which we will run WebGL
@@ -11,8 +15,6 @@
 	<body onload="main()" onresize="drawResize()">
 	
 	<div >
-
-		<b>3D Assemblies:walking robots</b>
 		<p></p>
 		<canvas id="dog" width="400" height="400" >
 			Please use a browser that supports "canvas"
@@ -22,21 +24,55 @@
 		<b>---------------------Keyboard Section ----------</b>
 		
 		<br>
-		<b>You can press 'D' key on keyboard to turn the camera head to right</b>
+		You can press <b>'->' </b>key on keyboard to turn the camera head to right.
+
+		You can press <b>'<-' </b>key on keyboard to turn the camera head to left.
+
+		You can press<b> 'up' </b>key on keyboard to raise the camera head.
+
+		You can press<b> 'down'</b> key on keyboard to lower the camera head.
 		<br>
-		<b>You can press 'A' key on keyboard to turn the camera head to left</b>
+		You can press<b> 'w' </b>key on keyboard to move the camera forward.
+
+		You can press<b> 's' </b>key on keyboard to move the camera backward.
+
+		You can press<b> 'a' </b>key on keyboard to move the camera to the left.
+
+		You can press<b> 'd' </b>key on keyboard to lower the camera to the right.
 		<br>
+		You could <b>drag</b> the object on the bottom right to rotate it.
 		<div id=MouseText> 
 			Mouse Drag totals (CVV x,y coords): 0,0
 		</div>
 		Current Quaternion: w + xi + yj + zk where (i,j,k) are 3-way imaginary numbers:
-		<div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. <br> length=1. </div>
-		<br>
-		<br>
+		<div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. length=1. </div>
 
 
 	</div>
+	<b>User adjustable asymmetric camera:</b>
+	<div class="slider-container">
+		<label for="left-slider">Left:</label>
+		<input type="number" id="left-value" value="-31.305926117280073">
+	
+		<label class="label" for="right-slider">Right:</label>
+		<input type="number" id="right-value" value="31.305926117280073"> 
+	
+		<label class="label" for="top-slider">Top:</label>
+		<input type="number" id="top-value" value="-31.424779291605358">
+	
+		<label class="label" for="bottom-slider">Bottom:</label>
+		<input type="number" id="bottom-value" value="31.424779291605358">
+	
+		<label class="label" for="near-slider">Near:</label>
+		<input type="number" id="near-value" value="1">
+	
+		<label class="label" for="far-slider">Far:</label>
+		<input type="number" id="far-value" value="300">
+	</div>
+<label for="cameraViewToggle"><b>Switch Camera's View:</b></label>
+<input type="checkbox" id="cameraViewToggle" name="cameraViewToggle" onchange="toggleCameraMode(this)">
 
+	</div>
 	
 
 

@@ -29,6 +29,7 @@ var gl_c
 var n
 var u_MvpMatrix
 var viewProjMatrix_c = new Matrix4();
+var useEndEffectorView = false;
 function main() {
   // Retrieve <canvas> element
   
@@ -70,6 +71,7 @@ function main() {
   canvas_c.onmousemove = 	function(ev){myMouseMove( ev, gl_c, canvas_c) };
 											// when the mouse moves, call mouseMove() function					
   canvas_c.onmouseup = 		function(ev){myMouseUp(   ev, gl_c, canvas_c)};
+
     
   drawResize();
   
@@ -237,6 +239,12 @@ var g_angle2brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle2min  = -30.0;       // init min, max allowed angle, in degrees
 var g_angle2max  =  60.0;
 
+var g_angle3now  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle3rate =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle3brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle3min  = -180.0;       // init min, max allowed angle, in degrees
+var g_angle3max  =  180.0;
+
 //variable for translation
 var x_diff_c = 0.5;
 var transX_c = 0.0;
@@ -256,11 +264,7 @@ function timerAll_c() {
     var elapsedMS = nowMS - g_lastMS_c;   // 
     g_lastMS_c = nowMS;                   // update for next webGL drawing.
     if(elapsedMS > 1000.0) {            
-      // Browsers won't re-draw 'canvas' element that isn't visible on-screen 
-      // (user chose a different browser tab, etc.); when users make the browser
-      // window visible again our resulting 'elapsedMS' value has gotten HUGE.
-      // Instead of allowing a HUGE change in all our time-dependent parameters,
-      // let's pretend that only a nominal 1/30th second passed:
+
       elapsedMS = 1000.0/30.0;
       }
     // Find new time-dependent parameters using the current or elapsed time:
@@ -269,6 +273,7 @@ function timerAll_c() {
     g_angle2now_c += g_angle2rate_c * g_angle2brake_c * (elapsedMS * 0.001);
     g_angle3now_c += g_angle3rate_c * g_angle3brake_c * (elapsedMS * 0.001);
     g_angle4now_c += g_angle4rate_c * g_angle4brake_c * (elapsedMS * 0.001);
+    g_angle3now += g_angle3rate * g_angle3brake * (elapsedMS * 0.001);
     // apply angle limits:  going above max, or below min? reverse direction!
     // (!CAUTION! if max < min, then these limits do nothing...)
     if((g_angle0now_c >= g_angle0max_c && g_angle0rate_c > 0) || // going over max, or
@@ -289,6 +294,10 @@ function timerAll_c() {
     if((g_angle4now_c >= g_angle4max_c && g_angle4rate_c > 0) || // going over max, or
     (g_angle4now_c <= g_angle4min_c && g_angle4rate_c < 0) )	 // going under min ?
     g_angle4rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle3now >= g_angle3max && g_angle3rate > 0) || // going over max, or
+    (g_angle3now <= g_angle3min && g_angle3rate < 0) )	 // going under min ?
+    g_angle3rate *= -1;	// YES: reverse direction.
 
 
     // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
@@ -400,6 +409,8 @@ function initVertexBuffers_c(gl_c) {
   makeGroundGrid();	
   drawAxes();
   makeDiamond(); 
+  makeSphere();
+  makeTri();
   
   vertices = new Float32Array([
     // Front face
@@ -428,7 +439,7 @@ function initVertexBuffers_c(gl_c) {
 ]);
 
 // get the start of the vertices
-var mySiz = ( vertices.length + gndVerts.length + axesVertices.length + diaVerts.length);	
+var mySiz = ( vertices.length + gndVerts.length + axesVertices.length + diaVerts.length + sphVerts.length + triVertices.length);	
 
 var colorShapes = new Float32Array(mySiz);
 vertices_start = 0
@@ -447,6 +458,16 @@ for(i=0,j=0; j< vertices.length; i++,j++) {
   for(j=0; j< diaVerts.length; i++, j++) {
     colorShapes[i] = diaVerts[j];
     }
+
+    sph_start = i;
+    for(j=0; j< sphVerts.length; i++, j++) {
+      colorShapes[i] = sphVerts[j];
+      }
+
+  tri_start = i;
+  for(j=0; j< triVertices.length; i++, j++) {
+    colorShapes[i] = triVertices[j];
+  }
   var shapeBufferHandle = gl_c.createBuffer();  
 	if (!shapeBufferHandle) {
 	console.log('Failed to create the shape buffer object');
@@ -572,11 +593,11 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   	// // Drawing:
   	// // Pass our current matrix to the vertex shaders:
     // gl_c.uniformMatrix4fv(u_MvpMatrix, false, g_modelMatrix_b.elements);
-    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, gnd_start/floatsPerVertex, gndVerts.length/floatsPerVertex)
+    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, gnd_start/floatsPerVertex, gndVerts.length/floatsPerVertex);
     
     //draw robot arm
     
-      g_modelMatrix_b.setTranslate(30.0, 12.0, 20.0);
+      g_modelMatrix_b.setTranslate(10.0, 0, 10.0);
       pushMatrix(g_modelMatrix_b);
       drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);// world coordinates
       g_modelMatrix_b.scale(1.25, 0.05, 1.25); // Make it a little thicker
@@ -624,17 +645,43 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
       drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
       g_modelMatrix_b.scale(0.3, 0.2, 0.3); // Make it a little thicker
       drawBox_c(gl_c, n,viewProjMatrix_c,u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+      if (useEndEffectorView) {
+        pushMatrix(g_modelMatrix_b);
+        g_modelMatrix_b.translate(0, 6, 0.0);
+        var endEffectorMatrix = g_modelMatrix_b;
+        var endEffectorPos = extractPositionFromMatrix(endEffectorMatrix);
+        camPos.elements.set([endEffectorPos[0], endEffectorPos[1], endEffectorPos[2]]);
+        var localForward = new Vector3([0, 0, 1]);
 
+        var worldForward = g_modelMatrix_b.multiplyVector3(localForward);
+        worldForward.normalize(); 
+        var lookDistance = 20; 
+        var camLookAtPoint = new Vector3([
+            endEffectorPos[0] + worldForward.elements[0] * lookDistance,
+            endEffectorPos[1] + worldForward.elements[1] * lookDistance,
+            endEffectorPos[2] + worldForward.elements[2] * lookDistance
+        ]);
+
+    // Update camLookAt to the new point
+    camLookAt.elements.set([camLookAtPoint.elements[0], camLookAtPoint.elements[1], camLookAtPoint.elements[2]]);
+        
+        g_modelMatrix_b = popMatrix();
+    
+      } else {
+          camPos.elements.set([camPosOr.elements[0], camPosOr.elements[1],camPosOr.elements[2]]); 
+          camLookAt.elements.set([camLookAtOr.elements[0], camLookAtOr.elements[1],camLookAtOr.elements[2]])
+      }
   //draw robot
   g_modelMatrix_b = popMatrix();  
   pushMatrix();
 
-  g_modelMatrix_b.setTranslate(0,12,0);
+  g_modelMatrix_b.setTranslate(0,10,0);
   g_modelMatrix_b.translate(transX_c, transY_c,transZ_c);	 
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(1, 1.0, 1);
   g_modelMatrix_b.rotate(body_rotate, 0.0, 1.0, 0.0);
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   var arm1Length = 10.0; 
   g_modelMatrix_b.translate(0,arm1Length, 0,0);	
   pushMatrix(g_modelMatrix_b);
@@ -646,12 +693,14 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   
   g_modelMatrix_b = popMatrix();
   g_modelMatrix_b.translate(0, -5, 0.0); 
   g_modelMatrix_b.rotate(-g_angle4now_c, 1.0, 0.0, 0.0);  
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
 
   g_modelMatrix_b = popMatrix();
   pushMatrix(g_modelMatrix_b);
@@ -661,12 +710,14 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   g_modelMatrix_b = popMatrix();
   g_modelMatrix_b.translate(0, -5, 0.0); 
   g_modelMatrix_b.rotate(-g_angle4now_c, 1.0, 0.0, 0.0);  
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
-
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+ 
   g_modelMatrix_b = popMatrix();
 
   g_modelMatrix_b.translate(0, -arm1Length, 0.0); 
@@ -680,12 +731,14 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   //lowleg1
   g_modelMatrix_b = popMatrix();
   g_modelMatrix_b.translate(0, -5, 0.0); 
   g_modelMatrix_b.rotate(g_angle3now_c, 1.0, 0.0, 0.0);  
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   
 
   g_modelMatrix_b = popMatrix();
@@ -696,22 +749,27 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   pushMatrix(g_modelMatrix_b);
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);// Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   //lowerLeg2
   g_modelMatrix_b = popMatrix();
   g_modelMatrix_b.translate(0, -5, 0.0); 
   g_modelMatrix_b.rotate(-g_angle3now_c, 1.0, 0.0, 0.0);  
   g_modelMatrix_b.scale(0.5, -0.5, 0.5); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   //neck
   g_modelMatrix_b = popMatrix();
   g_modelMatrix_b.translate(0, arm1Length, 0.0);
   g_modelMatrix_b.scale(0.2, 0.1, 0.2); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   //head
   g_modelMatrix_b.translate(0, arm1Length, 0.0);
   g_modelMatrix_b.rotate(g_angle0now_c, 0.0, 1.0, 0.0); 
   g_modelMatrix_b.scale(4, 2, 4); 
   drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex); // Draw
+  
+  drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
 
   //3d objects
   
@@ -720,11 +778,91 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   g_modelMatrix_b = popMatrix();
   
   pushMatrix(g_modelMatrix_b);
-    g_modelMatrix_b.translate(20, 0, 0.0);
+    g_modelMatrix_b.translate(20, 3, 0.0);
+    g_modelMatrix_b.rotate(90, 1, 0, 0);
     quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w);	// Quaternion-->Matrix
 	  g_modelMatrix_b.concat(quatMatrix);	
+    // g_modelMatrix_b.scale(1, 0.2, 1); 
+    drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, dia_start/floatsPerVertex, diaVerts.length/floatsPerVertex);
+
+    g_modelMatrix_b.scale(5, 5, 5); 
+    g_modelMatrix_b.rotate(-90, 1, 0, 0);
     drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+    // drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+
+  g_modelMatrix_b = popMatrix();
+  pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.translate(2, 0, 30);
+    pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.scale(1, 2.0, 1);
+    g_modelMatrix_b.rotate(body_rotate, 0.0, 1.0, 0.0);
     drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b.translate(0, 20, 0);
+    
+    g_modelMatrix_b.rotate(90, 1.0, 0.0, 0.0);
+    
+    g_modelMatrix_b.rotate(g_angle3now, 1, 0.0, 1.0);
+    pushMatrix(g_modelMatrix_b);
+    drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b.translate(0, 12.5, 0);
+    g_modelMatrix_b.scale(3, 3.0, 3);
+    g_modelMatrix_b.rotate(g_angle2now_c, 0.0, 1.0, 0.0);
+    drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, sph_start/floatsPerVertex, sphVerts.length/floatsPerVertex);
+    drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+
+
+  g_modelMatrix_b = popMatrix();
+
+  pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.translate(0, 2, -30);
+    g_modelMatrix_b.rotate(15, 1.0, 0, 0);
+    pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.scale(5, 5.0, 5);
+    drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, tri_start/floatsPerVertex, triVertices.length/floatsPerVertex);
+
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b.translate(0, 9.5, 0);
+    g_modelMatrix_b.scale(-5,-5, -5);
+    g_modelMatrix_b.rotate(g_angle2now_c, 0.0, 1, 0);
+    drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, tri_start/floatsPerVertex, triVertices.length/floatsPerVertex);
+  
+  g_modelMatrix_b = popMatrix();
+  pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.translate(-20, 2, -30);
+    g_modelMatrix_b.rotate(g_angle2now_c, 0.0, 1, 0);
+    pushMatrix(g_modelMatrix_b);
+    drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+
+    g_modelMatrix_b.translate(-2, 10, 0);
+    g_modelMatrix_b.rotate(g_angle3now_c, 1.0, 0, 0);
+    pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.scale(0.5,1, 0.5);
+    
+    drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b.translate(2, 10, 0);
+    g_modelMatrix_b.rotate(g_angle3now_c, 1.0, 0, 0);
+    pushMatrix(g_modelMatrix_b);
+    g_modelMatrix_b.scale(0.5,1, 0.5);
+    drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, vertices_start/floatsPerVertex, vertices.length/floatsPerVertex);
+
+    g_modelMatrix_b = popMatrix();
+    g_modelMatrix_b.translate(-2,10,0);
+    g_modelMatrix_b.scale(0.5,0.5, 0.5);
+    g_modelMatrix_b.rotate(g_angle2now_c, 1.0, 0, 0);
+    drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, dia_start/floatsPerVertex, diaVerts.length/floatsPerVertex);
+
+    
+
+  
                 
   
   
@@ -737,9 +875,9 @@ function makeDiamond() {
 	// Make a diamond-like shape from two adjacent tetrahedra, aligned with Z axis.
 	var baseVerts = 6; // number of vertices for the base square
 	diaVerts = new Float32Array(  ((baseVerts*8)) * floatsPerVertex);
-	var topRadius = 0.8;
-	var botRadius = 1;
-	var wallHei = 0.2
+	var topRadius = 2.4;
+	var botRadius = 4;
+	var wallHei = 0.6
 
 	for(v=1,j=0; v<2*baseVerts; v++,j+=floatsPerVertex) {	
 		// skip the first vertex--not needed.
@@ -747,32 +885,32 @@ function makeDiamond() {
 		{				// put even# vertices at center of cylinder's top cap:
 			diaVerts[j  ] = 0.0; 			// x,y,z,w == 0,0,1,1
 			diaVerts[j+1] = 0.0;	
-			diaVerts[j+2] = 1.0; 
-			diaVerts[j+3] = 1.0;			// r,g,b = topColr[]
+			diaVerts[j+2] = 3.0; 
+			diaVerts[j+3] = 3.0;			// r,g,b = topColr[]
 		}
 		else { 	
 						diaVerts[j  ] = topRadius* Math.cos(Math.PI*(v-1)/baseVerts);			// x
 						diaVerts[j+1] = topRadius * Math.sin(Math.PI*(v-1)/baseVerts);			// y
 
-			diaVerts[j+2] = 1.0;	// z
-			diaVerts[j+3] = 1.0;	// w.
+			diaVerts[j+2] = 3.0;	// z
+			
 			// r,g,b = topColr[]
 		
 		}
 		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
+			diaVerts[j+3]=botColr[0]; 
+			diaVerts[j+4]=botColr[1]; 
+			diaVerts[j+5]=botColr[2];
 		}
 		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
+			diaVerts[j+3]=ctrColr[0]; 
+			diaVerts[j+4]=ctrColr[1]; 
+			diaVerts[j+5]=ctrColr[2];
 		}
 		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
+			diaVerts[j+3]=topColr[0]; 
+			diaVerts[j+4]=topColr[1]; 
+			diaVerts[j+5]=topColr[2];
 		}
 	}
 
@@ -781,8 +919,8 @@ function makeDiamond() {
 		{		
 			diaVerts[j  ] = topRadius * Math.cos(Math.PI*(v)/baseVerts);		// x
 			diaVerts[j+1] = topRadius * Math.sin(Math.PI*(v)/baseVerts);		// y
-			diaVerts[j+2] = 1.0;	// z
-			diaVerts[j+3] = 1.0;	// w.
+			diaVerts[j+2] = 3.0;	// z
+			
 		
 		}
 		else		// position all odd# vertices along the bottom cap:
@@ -790,23 +928,23 @@ function makeDiamond() {
 			diaVerts[j  ] = botRadius * Math.cos(Math.PI*(v-1)/baseVerts);		// x
 			diaVerts[j+1] = botRadius * Math.sin(Math.PI*(v-1)/baseVerts);		// y
 			diaVerts[j+2] =-wallHei;	// z
-			diaVerts[j+3] = 1.0;	// w.
+			
 		
 		}
 		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
+			diaVerts[j+3]=botColr[0]; 
+			diaVerts[j+4]=botColr[1]; 
+			diaVerts[j+5]=botColr[2];
 		}
 		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
+			diaVerts[j+3]=ctrColr[0]; 
+			diaVerts[j+4]=ctrColr[1]; 
+			diaVerts[j+5]=ctrColr[2];
 		}
 		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
+			diaVerts[j+3]=topColr[0]; 
+			diaVerts[j+4]=topColr[1]; 
+			diaVerts[j+5]=topColr[2];
 		}
 	}
 
@@ -815,30 +953,30 @@ function makeDiamond() {
 			diaVerts[j  ] = botRadius * Math.cos(Math.PI*(v)/baseVerts);		// x
 			diaVerts[j+1] = botRadius * Math.sin(Math.PI*(v)/baseVerts);		// y
 			diaVerts[j+2] =-wallHei;	// z
-			diaVerts[j+3] = 1.0;	// w.
+			
 		
 		}
 		else {				// position odd#'d vertices at center of the bottom cap:
 			diaVerts[j  ] = 0.0; 			// x,y,z,w == 0,0,-1,1
 			diaVerts[j+1] = 0.0;	
 			diaVerts[j+2] =-wallHei - 1; 
-			diaVerts[j+3] = 1.0;			// r,g,b = botColr[]
+			
 
 		}
 		if(v%3 == 0){
-			diaVerts[j+4]=botColr[0]; 
-			diaVerts[j+5]=botColr[1]; 
-			diaVerts[j+6]=botColr[2];
+			diaVerts[j+3]=botColr[0]; 
+			diaVerts[j+4]=botColr[1]; 
+			diaVerts[j+5]=botColr[2];
 		}
 		if(v%3 ==1){
-			diaVerts[j+4]=ctrColr[0]; 
-			diaVerts[j+5]=ctrColr[1]; 
-			diaVerts[j+6]=ctrColr[2];
+			diaVerts[j+3]=ctrColr[0]; 
+			diaVerts[j+4]=ctrColr[1]; 
+			diaVerts[j+5]=ctrColr[2];
 		}
 		if(v%3 ==2){
-			diaVerts[j+4]=topColr[0]; 
-			diaVerts[j+5]=topColr[1]; 
-			diaVerts[j+6]=topColr[2];
+			diaVerts[j+3]=topColr[0]; 
+			diaVerts[j+4]=topColr[1]; 
+			diaVerts[j+5]=topColr[2];
 		}
 	}
 	
@@ -858,6 +996,111 @@ function drawAxes(){
     0, 0, 3, 0, 0, 1,
   ]);
 }
+
+function makeTri(){
+
+  var c30 = Math.sqrt(0.75);					
+	var sq2	= Math.sqrt(2.0);						 
+
+  triVertices = new Float32Array([
+			 
+     0.0,	 0.0, sq2, 		1.0, 	1.0,	1.0,	
+     c30, -0.5, 0.0, 		0.0,  0.0,  1.0, 	
+     0.0,  1.0, 0.0,  	1.0,  0.0,  0.0,	
+			
+		 0.0,	 0.0, sq2, 			1.0, 	1.0,	1.0,	
+     0.0,  1.0, 0.0,  		1.0,  0.0,  0.0,	
+    -c30, -0.5, 0.0,  		0.0,  1.0,  0.0, 	
+    	
+		 0.0,	 0.0, sq2,		1.0, 	1.0,	1.0,	
+    -c30, -0.5, 0.0, 		0.0,  1.0,  0.0, 	
+     c30, -0.5, 0.0, 		0.0,  0.0,  1.0, 
+     	 
+    -c30, -0.5,  0.0, 		0.0,  1.0,  0.0, 	
+     0.0,  1.0,  0.0,   	1.0,  0.0,  0.0,	
+     c30, -0.5,  0.0, 		0.0,  0.0,  1.0, 
+  ]);
+}
+
+function makeSphere() {
+
+  
+    var slices =12;		
+    var sliceVerts	= 21;	// # of vertices around the top edge of the slice
+
+    var topColr = new Float32Array([0.3, 0.3, 0.3]);	// South Pole: dark-gray
+    var botColr = new Float32Array([0.8, 0.8, 0.8]);	// North Pole: light-gray.
+    var errColr = new Float32Array([1.0, 0.2, 0.2]);	// Bright-red trouble colr
+    var sliceAngle = Math.PI/slices;	// One slice spans this fraction of the 
+    // 180 degree (Pi radian) lattitude angle between south pole and north pole.
+  
+    // Create a (global) array to hold this sphere's vertices:
+    sphVerts = new Float32Array(  ((slices*2*sliceVerts) -2) * floatsPerVertex);
+
+    var cosBot = 0.0;					// cosine and sine of the lattitude angle for
+    var sinBot = 0.0;					// 	the current slice's BOTTOM (southward) edge. 
+    // (NOTE: Lattitude = 0 @equator; -90deg @south pole; +90deg at north pole)
+    var cosTop = 0.0;					// "	" " for current slice's TOP (northward) edge
+    var sinTop = 0.0;
+
+    var j = 0;							// initialize our array index
+    var isFirstSlice = 1;		// ==1 ONLY while making south-pole slice; 0 otherwise
+    var isLastSlice = 0;		// ==1 ONLY while making north-pole slice; 0 otherwise
+    for(s=0; s<slices; s++) {	// for each slice of the sphere,---------------------
+      // For current slice's top & bottom edges, find lattitude angle sin,cos:
+      if(s==0) {
+        isFirstSlice = 1;		// true ONLY when we're creating the south-pole slice
+        cosBot =  0.0; 			// initialize: first slice's lower edge is south pole.
+        sinBot = -1.0;			// (cos(lat) sets slice diameter; sin(lat) sets z )
+      }
+      else {					// otherwise, set new bottom edge == old top edge
+        isFirstSlice = 0;	
+        cosBot = cosTop;
+        sinBot = sinTop;
+      }								// then compute sine,cosine of lattitude of new top edge.
+      cosTop = Math.cos((-Math.PI/2) +(s+1)*sliceAngle); 
+      sinTop = Math.sin((-Math.PI/2) +(s+1)*sliceAngle);
+
+      if(s==slices-1) isLastSlice=1;// (flag: skip last vertex of the last slice).
+      for(v=isFirstSlice;    v< 2*sliceVerts-isLastSlice;   v++,j+=floatsPerVertex)
+      {						// for each vertex of this slice,
+        if(v%2 ==0) { 
+          sphVerts[j  ] = cosBot * Math.cos(Math.PI * v/sliceVerts);	// x
+          sphVerts[j+1] = cosBot * Math.sin(Math.PI * v/sliceVerts);	// y
+          sphVerts[j+2] = sinBot;																			// z
+          																			// w.				
+        }
+        else {	
+          sphVerts[j  ] = cosTop * Math.cos(Math.PI * (v-1)/sliceVerts); 	// x
+          sphVerts[j+1] = cosTop * Math.sin(Math.PI * (v-1)/sliceVerts);	// y
+          sphVerts[j+2] = sinTop;		// z
+          
+        }
+        // finally, set some interesting colors for vertices:
+        if(v==0) { 	// Troublesome vertex: this vertex gets shared between 3 
+
+          sphVerts[j+4]=errColr[0]; 
+          sphVerts[j+5]=errColr[1]; 
+          sphVerts[j+6]=errColr[2];				
+          }
+        else if(isFirstSlice==1) {	
+          sphVerts[j+4]=botColr[0]; 
+          sphVerts[j+5]=botColr[1]; 
+          sphVerts[j+6]=botColr[2];	
+          }
+        else if(isLastSlice==1) {
+          sphVerts[j+4]=topColr[0]; 
+          sphVerts[j+5]=topColr[1]; 
+          sphVerts[j+6]=topColr[2];	
+        }
+        else {	// for all non-top, not-bottom slices, set vertex colors randomly
+            sphVerts[j+4]= Math.random()/2;  	// 0.0 <= red <= 0.5
+            sphVerts[j+5]= Math.random()/2;		// 0.0 <= grn <= 0.5 
+            sphVerts[j+6]= Math.random()/2;		// 0.0 <= blu <= 0.5					
+        }
+      }
+    }
+  }
 
 function makeGroundGrid() {
   //==============================================================================
@@ -924,9 +1167,18 @@ function drawBox_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix, start, end) {
 
   // Draw
   gl_c.drawArrays(gl_c.TRIANGLES, start,end);
-  // gl_c.drawElements(gl_c.TRIANGLES, n, gl_c.UNSIGNED_CYTE, 0);
 
-  // gl_c.drawArrays(gl_c.TRIANGLES, 2, 36/floatsPerVertex_c);
+}
+
+function drawObject(gl_c, n, viewProjMatrix_c, u_MvpMatrix, start, end) {
+  // Calculate the model view project matrix and pass it to u_MvpMatrix
+  g_mvpMatrix.set(viewProjMatrix_c);
+  g_mvpMatrix.multiply(g_modelMatrix_b);
+  gl_c.uniformMatrix4fv(u_MvpMatrix, false, g_mvpMatrix.elements);
+
+  // Draw
+  gl_c.drawArrays(gl_c.TRIANGLE_STRIP, start,end);
+
 }
 
 function drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, start, end) {
@@ -942,41 +1194,56 @@ function drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, start, end) {
   // gl_c.drawArrays(gl_c.TRIANGLES, 2, 36/floatsPerVertex_c);
 }
 //for perspective view
-var camPos = new Vector3([50.0, 30.0, 30.0]);  // Camera position
+var camPos = new Vector3([60.0, 30.0, 50.0]);  // Camera position
 var camLookAt = new Vector3([0, 0, 0]); // Look-at point
 var camUp = new Vector3([0, 1, 0]);  // 'up' vector
+var camPosOr = new Vector3([60.0, 30.0, 50.0]);
+var camLookAtOr = new Vector3([0, 0, 0]);
 //for ortho view
 
 function draw(){
   gl_c.clear(gl_c.COLOR_BUFFER_BIT | gl_c.DEPTH_BUFFER_BIT);
 
-  // Perspective view on the left half
+  var near = 1.0, far = 300.0;
+  var fovY = 35; // 35-degree vertical field of view for perspective camera
+  var aspectRatio = (canvas_c.width/2) / canvas_c.height;
+  var depth = (far - near) / 3; // Depth at which we match the frustum size
+  var frustumHeight = 2.0 * depth * Math.tan(fovY / 2 * Math.PI / 180);
+  var frustumWidth = frustumHeight * aspectRatio;
+
+
+
+  // Perspective view 
   gl_c.viewport(0, 0, canvas_c.width / 2, canvas_c.height); 
-  viewProjMatrix_c.setPerspective(50.0, (canvas_c.width/2) / canvas_c.height, 1.0, 100.0); 
+  viewProjMatrix_c.setPerspective(fovY, aspectRatio, near, far); 
   viewProjMatrix_c.lookAt(camPos.elements[0], camPos.elements[1], camPos.elements[2],
-  camLookAt.elements[0], camLookAt.elements[1], camLookAt.elements[2],
-  camUp.elements[0], camUp.elements[1], camUp.elements[2]); 
+    camLookAt.elements[0], camLookAt.elements[1], camLookAt.elements[2],
+    camUp.elements[0], camUp.elements[1], camUp.elements[2]); 
   draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix); 
 
   gl_c.clear(gl_c.DEPTH_BUFFER_BIT);
   
-  //another viewpoint
-  gl_c.viewport(canvas_c.width / 2,											 	
-  0, 											
-  canvas_c.width/2, 					
-  canvas_c.height);			  
+  // Orthographic view 
+  gl_c.viewport(canvas_c.width / 2, 0, canvas_c.width/2, canvas_c.height);
+  viewProjMatrix_c.setOrtho(-frustumWidth/2 , frustumWidth/2 , -frustumHeight/2 , frustumHeight /2, near, far);
+  var left = parseFloat(document.getElementById('left-value').value);
+  var right = parseFloat(document.getElementById('right-value').value);
+  var top = parseFloat(document.getElementById('top-value').value);
+  var bottom = parseFloat(document.getElementById('bottom-value').value);
+  var near = parseFloat(document.getElementById('near-value').value);
+  var far = parseFloat(document.getElementById('far-value').value);
+  viewProjMatrix_c.setOrtho(left, right, top , bottom, near, far);
 
-  vpAspect = (canvas_c.width/2) /					 
-    (canvas_c.height);		
-      
-  viewProjMatrix_c.setOrtho(-vpAspect * 20, vpAspect * 20, -20, 20, 1.0, 100.0);
-  viewProjMatrix_c.lookAt(camPos.elements[0], camPos.elements[1], camPos.elements[2],
-    camLookAt.elements[0], camLookAt.elements[1], camLookAt.elements[2],
-    camUp.elements[0], camUp.elements[1], camUp.elements[2]); 
+  
+
+  viewProjMatrix_c.lookAt(camPosOr.elements[0], camPosOr.elements[1], camPosOr.elements[2],
+    camLookAtOr.elements[0], camLookAtOr.elements[1], camLookAtOr.elements[2],
+    camUp.elements[0], camUp.elements[1], camUp.elements[2]);
 
   gl_c.uniformMatrix4fv(u_MvpMatrix, false, g_mvpMatrix.elements);
   draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix);
 }
+
 function drawResize() {
   //==============================================================================
   // Called when user re-sizes their browser window , because our HTML file
@@ -987,7 +1254,6 @@ function drawResize() {
   console.log('canvas_c width,height=', canvas_c.width, canvas_c.height);		
   console.log('Browser window: innerWidth,innerHeight=', 
                                   innerWidth, innerHeight);	
-                                  // http://www.w3schools.com/jsref/obj_window.asp
   
     
     //Make canvas fill the top 3/4 of our browser window:
@@ -1003,18 +1269,113 @@ function drawResize() {
       draw();  
     };
   
-    //------------------------------------
     tick_c(); 		
   }
-  function moveCamera(dx, dy, dz) {
-    camPos.elements[0] += dx;
-    camPos.elements[1] += dy;
-    camPos.elements[2] += dz;
   
-    camLookAt.elements[0] += dx;
-    camLookAt.elements[1] += dy;
-    camLookAt.elements[2] += dz;
+  function moveCamera(direction, amount) {
+    // Calculate the forward direction vector based on camPos and camLookAt
+    var forward = new Vector3([
+        camLookAt.elements[0] - camPos.elements[0],
+        camLookAt.elements[1] - camPos.elements[1],
+        camLookAt.elements[2] - camPos.elements[2]
+    ]);
+    forward.normalize();
+
+    // Calculate the right vector as a cross product of forward direction and up vector
+    var right = forward.cross(camUp);
+    right.normalize();
+
+    // Adjust camPos and camLookAt based on the input direction
+    switch(direction) {
+        case 'forward':
+            camPos.elements[0] += forward.elements[0] * amount;
+            camPos.elements[1] += forward.elements[1] * amount;
+            camPos.elements[2] += forward.elements[2] * amount;
+            camLookAt.elements[0] += forward.elements[0] * amount;
+            camLookAt.elements[1] += forward.elements[1] * amount;
+            camLookAt.elements[2] += forward.elements[2] * amount;
+            break;
+        case 'backward':
+            camPos.elements[0] -= forward.elements[0] * amount;
+            camPos.elements[1] -= forward.elements[1] * amount;
+            camPos.elements[2] -= forward.elements[2] * amount;
+            camLookAt.elements[0] -= forward.elements[0] * amount;
+            camLookAt.elements[1] -= forward.elements[1] * amount;
+            camLookAt.elements[2] -= forward.elements[2] * amount;
+            break;
+        case 'right':
+            camPos.elements[0] += right.elements[0] * amount;
+            camPos.elements[1] += right.elements[1] * amount;
+            camPos.elements[2] += right.elements[2] * amount;
+            camLookAt.elements[0] += right.elements[0] * amount;
+            camLookAt.elements[1] += right.elements[1] * amount;
+            camLookAt.elements[2] += right.elements[2] * amount;
+            break;
+        case 'left':
+            camPos.elements[0] -= right.elements[0] * amount;
+            camPos.elements[1] -= right.elements[1] * amount;
+            camPos.elements[2] -= right.elements[2] * amount;
+            camLookAt.elements[0] -= right.elements[0] * amount;
+            camLookAt.elements[1] -= right.elements[1] * amount;
+            camLookAt.elements[2] -= right.elements[2] * amount;
+            break;
+        // Add more directions if needed
+    }
+
+  var forward = new Vector3([
+    camLookAtOr.elements[0] - camPosOr.elements[0],
+    camLookAtOr.elements[1] - camPosOr.elements[1],
+    camLookAtOr.elements[2] - camPosOr.elements[2]
+  ]);
+  forward.normalize();
+
+  // Calculate the right vector as a cross product of forward direction and up vector
+  var right = forward.cross(camUp);
+  camUp = new Vector3([0, 1, 0]);
+  right.normalize();
+
+  // Adjust camPos and camLookAt based on the input direction
+  switch(direction) {
+      case 'forward':
+        camPosOr.elements[0] += forward.elements[0] * amount;
+        camPosOr.elements[1] += forward.elements[1] * amount;
+        camPosOr.elements[2] += forward.elements[2] * amount;
+        camLookAtOr.elements[0] += forward.elements[0] * amount;
+        camLookAtOr.elements[1] += forward.elements[1] * amount;
+        camLookAtOr.elements[2] += forward.elements[2] * amount;
+
+          break;
+      case 'backward':
+        camPosOr.elements[0] -= forward.elements[0] * amount;
+        camPosOr.elements[1] -= forward.elements[1] * amount;
+        camPosOr.elements[2] -= forward.elements[2] * amount;
+        camLookAtOr.elements[0] -= forward.elements[0] * amount;
+        camLookAtOr.elements[1] -= forward.elements[1] * amount;
+        camLookAtOr.elements[2] -= forward.elements[2] * amount;
+
+          break;
+      case 'right':
+        camPosOr.elements[0] += right.elements[0] * amount;
+        camPosOr.elements[1] += right.elements[1] * amount;
+        camPosOr.elements[2] += right.elements[2] * amount;
+        camLookAtOr.elements[0] += right.elements[0] * amount;
+        camLookAtOr.elements[1] += right.elements[1] * amount;
+        camLookAtOr.elements[2] += right.elements[2] * amount;
+
+          break;
+      case 'left':
+        camPosOr.elements[0] -= right.elements[0] * amount;
+        camPosOr.elements[1] -= right.elements[1] * amount;
+        camPosOr.elements[2] -= right.elements[2] * amount;
+        camLookAtOr.elements[0] -= right.elements[0] * amount;
+        camLookAtOr.elements[1] -= right.elements[1] * amount;
+        camLookAtOr.elements[2] -= right.elements[2] * amount;
+          break;
+      // Add more directions if needed
   }
+
+}
+
 
   function rotateCamera(axis, angleDeg) {
     var rad = Math.PI / 180 * angleDeg;
@@ -1036,6 +1397,21 @@ function drawResize() {
     ]);
 
     camUp = rotMatrix.multiplyVector3(camUp);
+    
+    //ortho view
+    var lookAtDirection = new Vector3([
+      camLookAtOr.elements[0] - camPosOr.elements[0],
+      camLookAtOr.elements[1] - camPosOr.elements[1],
+      camLookAtOr.elements[2] - camPosOr.elements[2]
+    ]);
+
+    lookAtDirection = rotMatrix.multiplyVector3(lookAtDirection);
+
+    camLookAtOr = new Vector3([
+      lookAtDirection.elements[0] + camPosOr.elements[0],
+      lookAtDirection.elements[1] + camPosOr.elements[1],
+      lookAtDirection.elements[2] + camPosOr.elements[2]
+    ]);
   }
 
   function rotateCameraUpDown(angleDeg) {
@@ -1073,8 +1449,45 @@ function drawResize() {
   
     // Also rotate the camera's up vector
     camUp = rotMatrix.multiplyVector3(camUp);
-  }
+
+
+    // for ortho view
+    var lookDirection = new Vector3([
+      camLookAtOr.elements[0] - camPosOr.elements[0],
+      camLookAtOr.elements[1] - camPosOr.elements[1],
+      camLookAtOr.elements[2] - camPosOr.elements[2]
+    ]);
+    lookDirection.normalize(); 
+    camUp = new Vector3([0, 1, 0]);
+    var camRight = lookDirection.cross(camUp);
+    camRight.normalize(); 
   
+    var rad = Math.PI / 180 * angleDeg;
+    var rotMatrix = new Matrix4();
+  
+    // Rotate around the camera's right axis
+    rotMatrix.setRotate(rad, camRight.elements[0], camRight.elements[1], camRight.elements[2]);
+    
+    // Rotate the lookAtDirection
+    var lookAtDirection = new Vector3([
+      camLookAtOr.elements[0] - camPosOr.elements[0],
+      camLookAtOr.elements[1] - camPosOr.elements[1],
+      camLookAtOr.elements[2] - camPosOr.elements[2]
+    ]);
+  
+    lookAtDirection = rotMatrix.multiplyVector3(lookAtDirection);
+  
+    camLookAtOr = new Vector3([
+      lookAtDirection.elements[0] + camPosOr.elements[0],
+      lookAtDirection.elements[1] + camPosOr.elements[1],
+      lookAtDirection.elements[2] + camPosOr.elements[2]
+    ]);
+  
+  }
+  function extractPositionFromMatrix(matrix) {
+    return [matrix.elements[12], matrix.elements[13], matrix.elements[14]];
+}
+
 
   function keydown(ev, gl, n, modelMatrix, u_ModelMatrix) {
 		switch (ev.keyCode) {
@@ -1091,23 +1504,42 @@ function drawResize() {
       rotateCameraUpDown(-20); 
       break;
       case 83://s
-        moveCamera(1, 0, 0);
+        moveCamera('backward', 1);
         break;
 
       case 87: //w
-        moveCamera(-1, 0, 0);
+        moveCamera('forward', 1);
         break;
       case 65: //a
-        moveCamera(0, 0, 1);
+        moveCamera('left', 1);
         break;
 
       case 68: //d
-        moveCamera(0, 0, -1);
+        moveCamera('right', 1);
         break;
 			default: return; 
 		}
 
 		}
+
+function toggleCameraMode(checkboxElem) {
+  useEndEffectorView = checkboxElem.checked;
+  
+}
+
+
+// function calculateEndEffectorWorldMatrix() {
+//   var worldMatrix = new Matrix4(); 
+
+//   worldMatrix.multiply(g_baseMatrix); 
+//   worldMatrix.multiply(g_joint1Matrix);
+//   worldMatrix.multiply(g_joint2Matrix); 
+
+//   return worldMatrix;
+// }
+
+
+
 function A0_runStop_c() {
   //==============================================================================
     if(g_angle0brake > 0.5)	// if running,
