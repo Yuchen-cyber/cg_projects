@@ -20,7 +20,6 @@
 			Please use a browser that supports "canvas"
 		</canvas>
 		<p></p>
-		<br>
 		<b>---------------------Keyboard Section ----------</b>
 		
 		<br>
@@ -38,38 +37,104 @@
 
 		You can press<b> 'a' </b>key on keyboard to move the camera to the left.
 
-		You can press<b> 'd' </b>key on keyboard to lower the camera to the right.
+		You can press<b> 'd' </b>key on keyboard to move the camera to the right.
+		<br>
+		<b>---------------------Mouse Drag Section ----------</b>
 		<br>
 		You could <b>drag</b> the object on the bottom right to rotate it.
-		<div id=MouseText> 
+		<b id=MouseText> 
 			Mouse Drag totals (CVV x,y coords): 0,0
-		</div>
+		</b>
+		<br>
 		Current Quaternion: w + xi + yj + zk where (i,j,k) are 3-way imaginary numbers:
-		<div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. length=1. </div>
+		<div id=QuatValue>  X=0i, Y=0j, Z=0k, W=1. </div>
 
 
 	</div>
-	<b>User adjustable asymmetric camera:</b>
+	<b>---------------------User adjustable joints of robot arm---------------------</b>
+	<br>
+	Adjust the angle smoothly via the input boxes after the rotation <b>stops</b>.
+	You could click the button to stop the rotation
+	<div class="slider-container" style="display:flex">
+		<div style="margin-right:10px;margin-left:10px;">
+			<b>Adjust angle 1(lower arm) 
+			</b>
+			<br>
+			Angle 1:(-140 < x < +40 deg): 
+	
+			<!-- <input id='usrAngle1' size=10> 
+			<button type="button" onClick='angle1Submit()'>Submit</button><BR> 
+			<div id= EditBoxOut1></div> -->
+			<input type="button" id="A0button" onclick="A0_runStop()" value="Angle 1 ON">
+			<input type="number" id="angleDisplay" min="-140" max="40"/>
+		</div>
+		
+		<div style="margin-right:10px;margin-left:10px;">
+			<b>Adjust angle 2(upper arm)
+			</b>
+			<br>
+			Angle 2:(-80 < x < +80 deg): 
+	
+			<!-- <input id='usrAngle2' size=10> 
+			<button type="button" onClick='angle2Submit()'>Submit</button><BR> 
+			<div id= EditBoxOut2></div> -->
+			<input type="button" id="A1button" onclick="A1_runStop()" value="Angle 2 ON">
+			<input type="number" id="angle1Display" min="-80" max="80"/>
+		</div>
+		<div style="margin-right:10px;margin-left:10px;">
+			<b>Adjust angle 3(rotated panel)
+			</b>
+			<br>
+			Angle 3:(-90 < x < +90 deg): 
+	
+			<!-- <input id='usrAngle3' size=10> 
+			<button type="button" onClick='angle3Submit()'>Submit</button><BR> 
+			<div id= EditBoxOut3></div> -->
+			<input type="button" id="A2button" onclick="A2_runStop()" value="Angle 3 ON">
+			<input type="number" id="angle2Display" min="-90" max="90"/>
+		</div>
+		<div style="margin-right:10px;margin-left:10px;">
+			<b>Adjust angle 4(two fingers)
+			</b>
+			<br>
+			Angle 4:(-30 < x < +60 deg): 
+	
+			<!-- <input id='usrAngle4' size=10> 
+			<button type="button" onClick='angle4Submit()'>Submit</button><BR> 
+			<div id= EditBoxOut4></div> -->
+			<input type="button" id="A3button" onclick="A3_runStop()" value="Angle 4 ON">
+			<input type="number" id="angle3Display" min="-30" max="60"/>
+		</div>
+		
+		
+
+	</div>
+	<b>---------------------User adjustable asymmetric camera---------------------</b>
+	<br>
+	It is better to adjust the parameters by clicking the up and down arrows on the right of the input boxes for the <b>far</b> value.
+	You can adjust other values by typing the number in the input boxes.
+	
 	<div class="slider-container">
 		<label for="left-slider">Left:</label>
-		<input type="number" id="left-value" value="-31.305926117280073">
+		<input type="number" id="left-value" >
 	
 		<label class="label" for="right-slider">Right:</label>
-		<input type="number" id="right-value" value="31.305926117280073"> 
+		<input type="number" id="right-value" > 
 	
 		<label class="label" for="top-slider">Top:</label>
-		<input type="number" id="top-value" value="-31.424779291605358">
+		<input type="number" id="top-value">
 	
 		<label class="label" for="bottom-slider">Bottom:</label>
-		<input type="number" id="bottom-value" value="31.424779291605358">
+		<input type="number" id="bottom-value" >
 	
 		<label class="label" for="near-slider">Near:</label>
-		<input type="number" id="near-value" value="1">
+		<input type="number" id="near-value" >
 	
 		<label class="label" for="far-slider">Far:</label>
-		<input type="number" id="far-value" value="300">
+		<input type="number" id="far-value" min = '2' value = '200' >
 	</div>
-<label for="cameraViewToggle"><b>Switch Camera's View:</b></label>
+<label for="cameraViewToggle"><b>---------------------Switch Perspective Camera's View---------------------</b></label>
+<br>Click the box to switch the camera's view. When the box is checked, the perspective camera will be attached to the moving robot arm's finger.
 <input type="checkbox" id="cameraViewToggle" name="cameraViewToggle" onchange="toggleCameraMode(this)">
 
 	</div>
@@ -90,7 +155,37 @@
     <script src="lib/cuon-matrix-quat03.js"></script>
 	<!--	Finally, load in our own JavaScript program file.
 	-->
-    <script src="WangYuchen_ProjectB_Walking_Robot.js"></script>
+    <script src="WangYuchen_ProjB.js"></script>
+	<script>
+        
+        function updateInputWithVariable() {
+
+            var angleInput = document.getElementById('angleDisplay');
+			var angle1Input = document.getElementById('angle1Display');
+			var angle2Input = document.getElementById('angle2Display');
+			var angle3Input = document.getElementById('angle3Display');
+
+
+            angleInput.value = g_angle0now.toFixed(2); 
+			angle1Input.value = g_angle1now.toFixed(2); 
+			angle2Input.value = g_angle4now.toFixed(2); 
+			angle3Input.value = g_angle2now.toFixed(2); 
+
+			//for orthographic view resize
+			
+
+			
+			
+
+
+        }
+
+
+		setInterval(updateInputWithVariable, 2);
+		updateInputWithVariable();
+
+  
+    </script>
 
   </body>
 </html>

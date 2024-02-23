@@ -1,13 +1,20 @@
 var VSHADER_SOURCE = 
  `uniform mat4 u_ModelMatrix;
+  uniform float Aconst;
+  uniform float Bconst;
+  uniform float C;
   attribute vec4 a_Position;
   attribute vec4 a_Color;
   varying vec4 v_Color;
   void main() {
-    gl_Position = u_ModelMatrix * a_Position;
+    float x_new = a_Position.x * (1.0 + Aconst * sin(Bconst * a_Position.z + C));
+    float y_new = a_Position.y * (1.0 + Aconst * sin(Bconst * a_Position.z + C));
+    vec4 newPosition = vec4(x_new, y_new, a_Position.z, 1.0);
+    gl_Position = u_ModelMatrix * newPosition;
     gl_PointSize = 10.0;
     v_Color = a_Color;
-  }`
+  }`;
+
 
   var FSHADER_SOURCE = 
  `precision mediump float;
@@ -41,6 +48,11 @@ var ctrColr = new Float32Array([0.930, 0.605, 0.843]);	// pink
 var topColr = new Float32Array([0.628, 0.910, 0.854]);	// blue
 var botColr = new Float32Array([0.940, 0.913, 0.620]); //yellow
 var gl = getWebGLContext(canvas);
+var u_C ;
+var AconstLocation;
+var BconstLocation;
+
+
 function main() {
 //==============================================================================
 	// Retrieve <canvas> element
@@ -76,6 +88,10 @@ function main() {
 	
 	// Get handle to graphics system's storage location of u_ModelMatrix
 	var u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
+	// Assuming Aconst, Bconst, and C have been defined earlier in your code
+	AconstLocation = gl.getUniformLocation(gl.program, 'Aconst');
+	BconstLocation = gl.getUniformLocation(gl.program, 'Bconst');
+	u_C = gl.getUniformLocation(gl.program, 'C');
 	if (!u_ModelMatrix) { 
 	console.log('Failed to get the storage location of u_ModelMatrix');
 	return;
@@ -85,26 +101,21 @@ function main() {
 	
 	// user interaction
 
-	// MOUSE:
-	// Create 'event listeners' for a few vital mouse events 
-	// (others events are available too... google it!).  
-	window.addEventListener("mousedown", myMouseDown); 
-	// (After each 'mousedown' event, browser calls the myMouseDown() fcn.)
-  	window.addEventListener("mousemove", myMouseMove); 
-	window.addEventListener("mouseup", myMouseUp);	
-	window.addEventListener("click", myMouseClick);				
-	window.addEventListener("dblclick", myMouseDblClick); 
+
+	
 	
 //-----------------  
 	document.onkeydown = function(ev){ keydown(ev, gl, n, modelMatrix, u_ModelMatrix ); };
 	// Start drawing: create 'tick' variable whose value is this function:
 	var tick = function() {
+		gl.uniform1f(AconstLocation, 0.3);
+		gl.uniform1f(BconstLocation, 0.3); 
+
 	currentAngle = animate(currentAngle);  // Update the rotation angle
+	// Set the values for Aconst, Bconst, and C
 	draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix);   // Draw shapes
 	// report current angle on console
-	document.getElementById('Mouse').innerHTML=
-			'Mouse Drag totals (CVV coords):\t'+
-			g_xMdragTot.toFixed(g_digits)+', \t'+g_yMdragTot.toFixed(g_digits);	
+
 	requestAnimationFrame(tick, canvas);   
 										// Request that the browser re-draw the webpage
 	};
@@ -113,9 +124,7 @@ function main() {
 }
 
 function initVertexBuffer(gl) {
-//==============================================================================
-// Create one giant vertex buffer object (VBO) that holds all vertices for all
-// shapes.
+
 	
 		// Make each 3D shape in its own array of vertices:
 		makeEgg();					// create, fill the eggVerts array
@@ -454,189 +463,56 @@ function draw(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
   							eggSatrt/floatsPerVertex, // start at this vertex number, and
   							eggVerts.length/floatsPerVertex);	// draw this many vertices.
 
- //-------Draw Spinning Diamonds:
- modelMatrix.setTranslate( 0.4, 0.4, 0.0); // 'set' means DISCARD old matrix,
-  						// (drawing axes centered in CVV), and then make new
-  						// drawing axes moved to the lower-left corner of CVV.
-  modelMatrix.scale(1,1,-1);							// convert to left-handed coord sys
-  																				// to match WebGL display canvas.
-  modelMatrix.scale(0.3, 0.3, 0.3);
-  						// Make it smaller:
-  modelMatrix.rotate(currentAngle, 1, 1, 0);  // Spin on XY diagonal axis
-  var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
-  // why add 0.001? avoids divide-by-zero in next statement
-  // in cases where user didn't drag the mouse.)
-modelMatrix.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
-  // Drawing:
-// Pass our current matrix to the vertex shaders:
-gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-// Draw the cylinder's vertices, and no other vertices:
-gl.drawArrays(gl.TRIANGLE_STRIP,				// use this drawing primitive, and
-	 diaStart/floatsPerVertex, // start at this vertex number, and
-	 diaVerts.length/floatsPerVertex);	// draw this many vertices.
 	
 }
 
 
-//===================Mouse and Keyboard event-handling Callbacks
 
-function myMouseDown(ev) {
-
-	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
-	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
-	  var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
-	//  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
-	  
-		// Convert to Canonical View Volume (CVV) coordinates too:
-	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
-							   (canvas.width/2);			// normalize canvas to -1 <= x < +1,
-		var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
-								 (canvas.height/2);
-	//	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
-		
-		g_isDrag = true;											// set our mouse-dragging flag
-		g_xMclik = x;													// record where mouse-dragging began
-		g_yMclik = y;
-		// report on webpage
-		document.getElementById('MouseAtResult').innerHTML = 
-		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
-	};
-	
-	
-	function myMouseMove(ev) {
-
-	
-		if(g_isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
-	
-		// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
-	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
-	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
-		var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
-	//  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
-	  
-		// Convert to Canonical View Volume (CVV) coordinates too:
-	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
-							   (canvas.width/2);		// normalize canvas to -1 <= x < +1,
-		var y = (yp - canvas.height/2) /		//										-1 <= y < +1.
-								 (canvas.height/2);
-	
-
-		g_xMdragTot += (x - g_xMclik);			// Accumulate change-in-mouse-position,&
-		g_yMdragTot += (y - g_yMclik);
-		// Report new mouse position & how far we moved on webpage:
-		document.getElementById('MouseAtResult').innerHTML = 
-		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
-		document.getElementById('MouseDragResult').innerHTML = 
-		  'Mouse Drag: '+(x - g_xMclik).toFixed(g_digits)+', '
-				+(y - g_yMclik).toFixed(g_digits);
-	
-	
-		g_xMclik = x;											// Make next drag-measurement from here.
-		g_yMclik = y;
-	};
-	
-	function myMouseUp(ev) {
-	  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
-	  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
-		var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
-	//  console.log('myMouseUp  (pixel coords):\n\t xp,yp=\t',xp,',\t',yp);
-	  
-		// Convert to Canonical View Volume (CVV) coordinates too:
-	  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
-							   (canvas.width/2);			// normalize canvas to -1 <= x < +1,
-		var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
-								 (canvas.height/2);
-		console.log('myMouseUp  (CVV coords  ):\n\t x, y=\t',x,',\t',y);
-		
-		g_isDrag = false;											// CLEAR our mouse-dragging flag, and
-		// accumulate any final bit of mouse-dragging we did:
-		g_xMdragTot += (x - g_xMclik);
-		g_yMdragTot += (y - g_yMclik);
-		// Report new mouse position:
-		document.getElementById('MouseAtResult').innerHTML = 
-		  'Mouse At: '+x.toFixed(g_digits)+', '+y.toFixed(g_digits);
-		console.log('myMouseUp: g_xMdragTot,g_yMdragTot =',
-			g_xMdragTot.toFixed(g_digits),',\t',g_yMdragTot.toFixed(g_digits));
-	};
-	
-	function myMouseClick(ev) {
-
-		console.log("myMouseClick() on button: ", ev.button); 
-	}	
-	
-	function myMouseDblClick(ev) {
-		console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
-	}
-
-	function keydown(ev, gl, n, modelMatrix, u_ModelMatrix) {
-		switch (ev.keyCode) {
-			case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-			spinUp()
-			break;
-			case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-			spinDown()
-			break;
-			default: return; // Skip drawing at no effective action
-		}
-		// Draw the robot arm
-		draw(gl, n,currentAngle, modelMatrix, u_ModelMatrix);
-		}
-		function updateCtrColor() {
-			var hexColor = document.getElementById('ctrColorPicker').value;
-			var rgb = hexToRGB(hexColor);
-			ctrColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
-			initVertexBuffer(gl);
-		  }
-		  
-		  function updateTopColor() {
-			var hexColor = document.getElementById('topColorPicker').value;
-			var rgb = hexToRGB(hexColor);
-			topColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
-			initVertexBuffer(gl);
-		  }
-		  
-		  function updateBotColor() {
-			var hexColor = document.getElementById('botColorPicker').value;
-			var rgb = hexToRGB(hexColor);
-			botColr = new Float32Array([rgb.r / 255, rgb.g / 255, rgb.b / 255]);
-			initVertexBuffer(gl);
-		  }
-		
-		function hexToRGB(hex) {
-		var r = parseInt(hex.slice(1, 3), 16);
-		var g = parseInt(hex.slice(3, 5), 16);
-		var b = parseInt(hex.slice(5, 7), 16);
-		return { r, g, b };
-		}
-		  
 
 // Last time that this function was called:  (used for animation timing)
 var g_last = Date.now();
 var x_diff = 0.01;
+
+var Cvalue = 0.0;
+var speed;
+var A_value = 0;
+var B_value = 0;
 function animate(angle) {
 //==============================================================================
   // Calculate the elapsed time
   var now = Date.now();
   var elapsed = now - g_last;
   g_last = now;    
-  // Update the current rotation angle (adjusted by the elapsed time)
-  //  limit the angle to move smoothly between +20 and -85 degrees:
-//  if(angle >  120.0 && ANGLE_STEP > 0) ANGLE_STEP = -ANGLE_STEP;
-//  if(angle < -120.0 && ANGLE_STEP < 0) ANGLE_STEP = -ANGLE_STEP;
   
+speed = 2 * Math.PI / 4000; // One loop every 4000 milliseconds (4 seconds)
+speed = parseFloat(document.getElementById('speed').value);
+
+A_value = parseFloat(document.getElementById('amplitude').value)
+B_value = parseFloat(document.getElementById('frequency').value)
+
+Cvalue += elapsed * speed;
+if (Cvalue > 2 * Math.PI) {
+  Cvalue -= 2 * Math.PI; // Loop back to 0 after exceeding 2*PI
+}
+
+gl.uniform1f(u_C, Cvalue);
+gl.uniform1f(AconstLocation, A_value);
+gl.uniform1f(BconstLocation, B_value); 
+
+
   var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
   var width = canvas.width;
   var height = canvas.height;
   
-  transX += x_diff; // Adjust the value to control the speed and direction
-  if (transX >= 1){
-	x_diff = -0.01;
-  }else if(transX <= 0){
-	x_diff = 0.01;
-  }
-  transX += x_diff;
-  transY += 0.0;
-  transZ += 0.0;
+//   transX += x_diff; // Adjust the value to control the speed and direction
+//   if (transX >= 1){
+// 	x_diff = -0.01;
+//   }else if(transX <= 0){
+// 	x_diff = 0.01;
+//   }
+//   transX += x_diff;
+//   transY += 0.0;
+//   transZ += 0.0;
   return newAngle %= 360;
 }
 

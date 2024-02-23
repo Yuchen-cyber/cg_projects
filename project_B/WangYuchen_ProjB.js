@@ -30,10 +30,15 @@ var n
 var u_MvpMatrix
 var viewProjMatrix_c = new Matrix4();
 var useEndEffectorView = false;
+//for perspective view
+var camPos = new Vector3([60.0, 30.0, 50.0]);  // Camera position
+var camLookAt = new Vector3([0, 0, 0]); // Look-at point
+var camUp = new Vector3([0, 1, 0]);  // 'up' vector
+var camPosOr = new Vector3([60.0, 30.0, 50.0]);
+var camLookAtOr = new Vector3([0, 0, 0]);
 function main() {
   // Retrieve <canvas> element
   
-  console.log("success");
 
   // Get the rendering context for WebGL
   gl_c = getWebGLContext(canvas_c);
@@ -165,27 +170,32 @@ function myMouseDown(ev, gl, canvas) {
             yMdragTot.toFixed(5);	
     };
 
-  function dragQuat(xdrag, ydrag) {
+function dragQuat(xdrag, ydrag) {
 
-      var res = 5;
-      var qTmp = new Quaternion(0,0,0,1);
-      
-      var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
-      
-      qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag + 0.0001, 0.0, dist*150.0);
+  var res = 5;
+  var qTmp = new Quaternion(0,0,0,1);
 
-                  
-      qTmp.multiply(qNew,qTot);			// apply new rotation to current rotation. 
+  
+  var dist = Math.sqrt(xdrag*xdrag + ydrag*ydrag);
+  
+  qNew.setFromAxisAngle(-ydrag + 0.0001, xdrag  + 0.0001, 0.0, dist*150.0);
+  //qNew.setFromAxisAngle(xdrag*(camPos.elements[0])+0.000001, xdrag*(-camPos.elements[1])+0.000001,ydrag+0.000001, dist*150.0);
+            
+  qTmp.multiply(qNew,qTot);			// apply new rotation to current rotation. 
 
-      qTot.copy(qTmp);
-      // show the new quaternion qTot on our webpage in the <div> element 'QuatValue'
-      document.getElementById('QuatValue').innerHTML= 
-                                  '\t X=' +qTot.x.toFixed(res)+
-                                'i\t Y=' +qTot.y.toFixed(res)+
-                                'j\t Z=' +qTot.z.toFixed(res)+
-                                'k\t W=' +qTot.w.toFixed(res)+
-                                '<br>length='+qTot.length().toFixed(res);
-    };
+  qTot.copy(qTmp);
+  // show the new quaternion qTot on our webpage in the <div> element 'QuatValue'
+  document.getElementById('QuatValue').innerHTML= 
+                              '\t X=' +qTot.x.toFixed(res)+
+                            'i\t Y=' +qTot.y.toFixed(res)+
+                            'j\t Z=' +qTot.z.toFixed(res)+
+                            'k\t W=' +qTot.w.toFixed(res)+
+                            '   length='+qTot.length().toFixed(res);
+};
+
+
+
+  
 
 var ANGLE_STEP_C = 3.0;    // The increments of rotation angle (degrees)
 var body_rotate = 0.0;
@@ -244,6 +254,12 @@ var g_angle3rate =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle3brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle3min  = -180.0;       // init min, max allowed angle, in degrees
 var g_angle3max  =  180.0;
+
+var g_angle4now  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle4rate =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle4brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle4min  = -90.0;       // init min, max allowed angle, in degrees
+var g_angle4max  =  90.0;
 
 //variable for translation
 var x_diff_c = 0.5;
@@ -368,6 +384,7 @@ function timerAll_c() {
     g_angle0now += g_angle0rate * g_angle0brake * (elapsedMS * 0.001);	// update.
     g_angle1now += g_angle1rate * g_angle1brake * (elapsedMS * 0.001);
     g_angle2now += g_angle2rate * g_angle2brake * (elapsedMS * 0.001);
+    g_angle4now += g_angle4rate * g_angle4brake * (elapsedMS * 0.001);
     // apply angle limits:  going above max, or below min? reverse direction!
     // (!CAUTION! if max < min, then these limits do nothing...)
     if((g_angle0now >= g_angle0max && g_angle0rate > 0) || // going over max, or
@@ -380,6 +397,10 @@ function timerAll_c() {
     if((g_angle2now >= g_angle2max && g_angle2rate > 0) || // going over max, or
         (g_angle2now <= g_angle2min && g_angle2rate < 0) )	 // going under min ?
         g_angle2rate *= -1;	// YES: reverse direction.
+
+    if((g_angle4now >= g_angle4max && g_angle4rate > 0) || // going over max, or
+    (g_angle4now <= g_angle4min && g_angle4rate < 0) )	 // going under min ?
+    g_angle4rate *= -1;	// YES: reverse direction.
 
 
     // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
@@ -397,6 +418,11 @@ function timerAll_c() {
     {
       if(     g_angle2now < -180.0) g_angle2now += 360.0;	// go to >= -180.0 or
       else if(g_angle2now >  180.0) g_angle2now -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle4min > g_angle4max)
+    {
+      if(     g_angle4now < -180.0) g_angle4now += 360.0;	// go to >= -180.0 or
+      else if(g_angle4now >  180.0) g_angle4now -= 360.0;	// go to <= +180.0
     }
 
   }
@@ -574,6 +600,21 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
   drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);// world coordinates
   pushMatrix();
   g_modelMatrix_b = popMatrix(); 
+  // for angles
+
+  if (g_angle0brake == 0){
+    g_angle0now = parseFloat(document.getElementById('angleDisplay').value);
+  }
+  if (g_angle1brake == 0){
+    g_angle1now = parseFloat(document.getElementById('angle1Display').value);
+  }
+  if (g_angle2brake == 0){
+    g_angle2now = parseFloat(document.getElementById('angle3Display').value);
+  }
+  if (g_angle4brake == 0){
+    g_angle4now = parseFloat(document.getElementById('angle2Display').value);
+  }
+  
 
   //draw robot arm
   // Draw a base
@@ -597,7 +638,7 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
     
     //draw robot arm
     
-      g_modelMatrix_b.setTranslate(10.0, 0, 10.0);
+      g_modelMatrix_b.setTranslate(10.0, 0, 20.0);
       pushMatrix(g_modelMatrix_b);
       drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);// world coordinates
       g_modelMatrix_b.scale(1.25, 0.05, 1.25); // Make it a little thicker
@@ -623,7 +664,7 @@ function draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix) {
       // Arm3
       g_modelMatrix_b.translate(0.0, arm1Length, 0.0);
       // g_modelMatrix_b.rotate(180, 0.0, 1.0, 0.0);   　　　
-      g_modelMatrix_b.rotate(g_angle1now, 0.0, 1.0, 0.0);  
+      g_modelMatrix_b.rotate(g_angle4now, 0.0, 1.0, 0.0);  
       drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
       pushMatrix(g_modelMatrix_b);
       g_modelMatrix_b.scale(0.8, 0.08, 1.2); 
@@ -985,15 +1026,15 @@ function makeDiamond() {
 function drawAxes(){
 
   axesVertices = new Float32Array([
-    // X axis in red
-    0, 0, 0, 1, 0, 0,
-    3, 0, 0, 1, 0, 0,
+    // X axis in blue
+    0, 0, 0, 0, 0, 1,
+    3, 0, 0, 0, 0, 1,
     // Y axis in green
     0, 0, 0, 0, 1, 0,
     0, 3, 0, 0, 1, 0,
-    // Z axis in blue
-    0, 0, 0, 0, 0, 1,
-    0, 0, 3, 0, 0, 1,
+    // Z axis in red
+    0, 0, 0, 1, 0, 0,
+    0, 0, 3, 1, 0, 0,
   ]);
 }
 
@@ -1112,6 +1153,8 @@ function makeGroundGrid() {
     var xymax	= 50.0;			// grid size; extends to cover +/-xymax in x and y.
      var xColr = new Float32Array([1.0, 1.0, 0.3]);	// bright yellow
      var yColr = new Float32Array([0.5, 1.0, 0.5]);	// bright green.
+
+    
      
     // Create an (global) array to hold this ground-plane's vertices:
     gndVerts = new Float32Array(floatsPerVertex*2*(xcount+ycount));
@@ -1193,26 +1236,35 @@ function drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, start, end) {
 
   // gl_c.drawArrays(gl_c.TRIANGLES, 2, 36/floatsPerVertex_c);
 }
-//for perspective view
-var camPos = new Vector3([60.0, 30.0, 50.0]);  // Camera position
-var camLookAt = new Vector3([0, 0, 0]); // Look-at point
-var camUp = new Vector3([0, 1, 0]);  // 'up' vector
-var camPosOr = new Vector3([60.0, 30.0, 50.0]);
-var camLookAtOr = new Vector3([0, 0, 0]);
-//for ortho view
+
+
+
+
+  //viewProjMatrix_c.setOrtho(-frustumWidth/2 , frustumWidth/2 , -frustumHeight/2 , frustumHeight /2, near, far);
+
+var left;
+var right;
+var bottom;
+var top_v;
+var near;
+var far;
+var canvasChanged = false;
+
 
 function draw(){
   gl_c.clear(gl_c.COLOR_BUFFER_BIT | gl_c.DEPTH_BUFFER_BIT);
-
-  var near = 1.0, far = 300.0;
+  //for ortho view
   var fovY = 35; // 35-degree vertical field of view for perspective camera
   var aspectRatio = (canvas_c.width/2) / canvas_c.height;
+  near = 1.0;
+  far = 200.0;
   var depth = (far - near) / 3; // Depth at which we match the frustum size
   var frustumHeight = 2.0 * depth * Math.tan(fovY / 2 * Math.PI / 180);
   var frustumWidth = frustumHeight * aspectRatio;
-
-
-
+  right = frustumWidth/2;
+  top_v =(-frustumHeight/2);
+  bottom = frustumHeight/2;
+  left = -frustumWidth/2;
   // Perspective view 
   gl_c.viewport(0, 0, canvas_c.width / 2, canvas_c.height); 
   viewProjMatrix_c.setPerspective(fovY, aspectRatio, near, far); 
@@ -1224,17 +1276,11 @@ function draw(){
   gl_c.clear(gl_c.DEPTH_BUFFER_BIT);
   
   // Orthographic view 
-  gl_c.viewport(canvas_c.width / 2, 0, canvas_c.width/2, canvas_c.height);
-  viewProjMatrix_c.setOrtho(-frustumWidth/2 , frustumWidth/2 , -frustumHeight/2 , frustumHeight /2, near, far);
-  var left = parseFloat(document.getElementById('left-value').value);
-  var right = parseFloat(document.getElementById('right-value').value);
-  var top = parseFloat(document.getElementById('top-value').value);
-  var bottom = parseFloat(document.getElementById('bottom-value').value);
-  var near = parseFloat(document.getElementById('near-value').value);
-  var far = parseFloat(document.getElementById('far-value').value);
-  viewProjMatrix_c.setOrtho(left, right, top , bottom, near, far);
-
   
+  gl_c.viewport(canvas_c.width / 2, 0, canvas_c.width/2, canvas_c.height);
+  update_values();
+ 
+  viewProjMatrix_c.setOrtho(left, right, top_v , bottom, near, far);
 
   viewProjMatrix_c.lookAt(camPosOr.elements[0], camPosOr.elements[1], camPosOr.elements[2],
     camLookAtOr.elements[0], camLookAtOr.elements[1], camLookAtOr.elements[2],
@@ -1244,29 +1290,58 @@ function draw(){
   draw_c(gl_c, n, viewProjMatrix_c, u_MvpMatrix);
 }
 
+function update_values(){
+  if(!canvasChanged){
+    var left_previous = parseFloat(document.getElementById('left-value').value);
+    if (left_previous && left != left_previous){
+      left = left_previous
+    }
+    var right_previous = parseFloat(document.getElementById('right-value').value);
+    if (right_previous && right != right_previous){
+      right = right_previous
+    }
+    var top_previous = parseFloat(document.getElementById('top-value').value);
+    if (top_previous && top_v != top_previous){
+      top_v = top_previous
+    }
+    var bottom_previous = parseFloat(document.getElementById('bottom-value').value);
+    if (bottom_previous && bottom != bottom_previous){
+      bottom = bottom_previous
+    }
+    var near_previous = parseFloat(document.getElementById('near-value').value);
+    if (near_previous && near != near_previous){
+      near = near_previous
+    }
+    var far_previous = parseFloat(document.getElementById('far-value').value);
+    if (far_previous && far != far_previous){
+      far = far_previous
+    }
+  }
+}
+
 function drawResize() {
-  //==============================================================================
-  // Called when user re-sizes their browser window , because our HTML file
-  // contains:  <body onload="main()" onresize="winResize()">
   
-    //Report our current browser-window contents:
-  
-  console.log('canvas_c width,height=', canvas_c.width, canvas_c.height);		
-  console.log('Browser window: innerWidth,innerHeight=', 
-                                  innerWidth, innerHeight);	
-  
-    
-    //Make canvas fill the top 3/4 of our browser window:
-    var xtraMargin = 16;    // keep a margin (otherwise, browser adds scroll-bars)
+
+
+    var xtraMargin = 16;    
     canvas_c.width = innerWidth - xtraMargin;
     canvas_c.height = (innerHeight*3/4) - xtraMargin;
     
     var tick_c = function() {		    
       
-      requestAnimationFrame(tick_c, gl_c); 
+      
          
-      timerAll_c();  				
-      draw();  
+      timerAll_c();  
+      window.addEventListener('resize', function() {
+        canvasChanged=true;
+        
+      });				
+      draw(); 
+      setTimeout(function() { 
+        canvasChanged = false;
+      }, 1000);
+
+      requestAnimationFrame(tick_c, gl_c);  
     };
   
     tick_c(); 		
@@ -1528,56 +1603,115 @@ function toggleCameraMode(checkboxElem) {
 }
 
 
-// function calculateEndEffectorWorldMatrix() {
-//   var worldMatrix = new Matrix4(); 
+function angle1Submit() {
 
-//   worldMatrix.multiply(g_baseMatrix); 
-//   worldMatrix.multiply(g_joint1Matrix);
-//   worldMatrix.multiply(g_joint2Matrix); 
+  var UsrTxt = document.getElementById('usrAngle1').value;	
+  
+  var angle = parseFloat(UsrTxt);
+  if (angle <= g_angle0max && angle >= g_angle0min){
+    g_angle0now = parseFloat(UsrTxt);     
+    document.getElementById('EditBoxOut1').innerHTML ='You Typed: '+UsrTxt;
+  }else{
+    document.getElementById('EditBoxOut1').innerHTML ='Sorry, exceed the range of this angle';
+  }
+  
+};
 
-//   return worldMatrix;
-// }
+function angle2Submit() {
+
+  var UsrTxt = document.getElementById('usrAngle2').value;	
+  
+  var angle = parseFloat(UsrTxt);
+  if (angle <= g_angle1max && angle >= g_angle1min){
+    g_angle1now = parseFloat(UsrTxt);     
+    document.getElementById('EditBoxOut2').innerHTML ='You Typed: '+UsrTxt;
+  }else{
+    document.getElementById('EditBoxOut2').innerHTML ='Sorry, exceed the range of this angle';
+  }
+  
+};
+
+function angle3Submit() {
+
+  var UsrTxt = document.getElementById('usrAngle3').value;	
+  
+  var angle = parseFloat(UsrTxt);
+  if (angle <= g_angle4max && angle >= g_angle4min){
+    g_angle4now = parseFloat(UsrTxt);     
+    document.getElementById('EditBoxOut3').innerHTML ='You Typed: '+UsrTxt;
+  }else{
+    document.getElementById('EditBoxOut3').innerHTML ='Sorry, exceed the range of this angle';
+  }
+  
+};
+
+function angle4Submit() {
+
+  var UsrTxt = document.getElementById('usrAngle4').value;	
+  
+  var angle = parseFloat(UsrTxt);
+  if (angle <= g_angle2max && angle >= g_angle2min){
+    g_angle2now = parseFloat(UsrTxt);     
+    document.getElementById('EditBoxOut4').innerHTML ='You Typed: '+UsrTxt;
+  }else{
+    document.getElementById('EditBoxOut4').innerHTML ='Sorry, exceed the range of this angle';
+  }
+  
+};
 
 
-
-function A0_runStop_c() {
+function A0_runStop() {
   //==============================================================================
     if(g_angle0brake > 0.5)	// if running,
     {
-      g_angle0brake_c = 0.0;	// stop, and change button label:
-      document.getElementById("A0button_c").value="Angle 0 OFF";
+      g_angle0brake = 0.0;	// stop, and change button label:
+      document.getElementById("A0button").value="Angle 1 OFF";
     }
     else 
     {
-      g_angle0brake_c= 1.0;	// Otherwise, go.
-      document.getElementById("A0button_c").value="Angle 0 ON";
+      g_angle0brake= 1.0;	// Otherwise, go.
+      document.getElementById("A0button").value="Angle 1 ON";
     }
   }
   
-  function A1_runStop_c() {
+  function A1_runStop() {
   //==============================================================================
-    if(g_angle1brake_c > 0.5)	// if running,
+    if(g_angle1brake > 0.5)	// if running,
     {
-      g_angle1brake_c = 0.0;	// stop, and change button label:
-      document.getElementById("A1button_c").value="Angle 1 OFF";
+      g_angle1brake = 0.0;	// stop, and change button label:
+      document.getElementById("A1button").value="Angle 2 OFF";
     }
     else 
     {
-      g_angle1brake_c = 1.0;	// Otherwise, go.
-      document.getElementById("A1button_c").value="Angle 1 ON";
+      g_angle1brake = 1.0;	// Otherwise, go.
+      document.getElementById("A1button").value="Angle 2 ON";
     }
   }
 
-  function A2_runStop_c() {
+  function A2_runStop() {
     //==============================================================================
-      if(g_angle2brake_c > 0.5)	// if running,
+      if(g_angle4brake > 0.5)	// if running,
       {
-        g_angle2brake_c = 0.0;	// stop, and change button label:
-        document.getElementById("A2button_c").value="Angle 2 OFF";
+        g_angle4brake = 0.0;	// stop, and change button label:
+        document.getElementById("A2button").value="Angle 3 OFF";
       }
       else 
       {
-        g_angle2brake_c = 1.0;	// Otherwise, go.
-        document.getElementById("A2button_c").value="Angle 2 ON";
+        g_angle4brake = 1.0;	// Otherwise, go.
+        document.getElementById("A2button").value="Angle 3 ON";
       }
     }
+
+    function A3_runStop() {
+      //==============================================================================
+        if(g_angle2brake > 0.5)	// if running,
+        {
+          g_angle2brake = 0.0;	// stop, and change button label:
+          document.getElementById("A3button").value="Angle 4 OFF";
+        }
+        else 
+        {
+          g_angle2brake = 1.0;	// Otherwise, go.
+          document.getElementById("A3button").value="Angle 4 ON";
+        }
+      }
