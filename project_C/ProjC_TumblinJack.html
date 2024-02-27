@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Proj C-LATEST</title>
+  </head>
+
+  <body onload="main()" onresize="drawResize()">
+    <canvas id="webgl" width="600" height="600">
+    Please use a browser that supports "canvas"
+    </canvas>
+    <b>---------------------Keyboard Section ----------</b>
+		
+		<br>
+		You can press <b>'->' </b>key on keyboard to turn the camera head to right.
+
+		You can press <b>'<-' </b>key on keyboard to turn the camera head to left.
+
+		You can press<b> 'up' </b>key on keyboard to raise the camera head.
+
+		You can press<b> 'down'</b> key on keyboard to lower the camera head.
+		<br>
+		You can press<b> 'w' </b>key on keyboard to move the camera forward.
+
+		You can press<b> 's' </b>key on keyboard to move the camera backward.
+
+		You can press<b> 'a' </b>key on keyboard to move the camera to the left.
+
+		You can press<b> 'd' </b>key on keyboard to move the camera to the right.
+		<br>
+    <p>
+      <button type="button" onclick="VBO0toggle()">VBO-0 hide/show</button>
+      <button type="button" onclick="VBO1toggle()">VBO-1 hide/show</button>
+      <button type="button" onclick="VBO2toggle()">VBO-2 hide/show</button>
+    </p>
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix-quat03.js"></script>
+<!-- YOU SHOULD UPGRADE to Brandon Jones' far-faster, 
+      far more complete vector/matrix/quaternion library: (Google it!)
+		<script src="../lib/glmatrix.js"></script>
+--> 
+	<script src="JT_VBObox-Lib.js"></script>
+    <script src="ProjC_TumblinJack.js"></script>
+  </body>
+</html>
