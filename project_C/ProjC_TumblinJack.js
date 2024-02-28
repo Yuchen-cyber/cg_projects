@@ -84,6 +84,8 @@ worldBox = new VBObox0();		  // Holds VBO & shaders for 3D 'world' ground-plane 
 gouraudBox = new VBObox1();		  // "  "  for first set of custom-shaded 3D parts
 phongBox = new VBObox2();     // "  "  for second set of custom-shaded 3D parts
 objectBox = new VBObox3();
+robotBox = new VBObox4();
+triBox = new VBObox5();
 
 
 
@@ -221,6 +223,8 @@ function main() {
   gouraudBox.init(gl);		//  "		"		"  for 1st kind of shading & lighting
 	phongBox.init(gl);    //  "   "   "  for 2nd kind of shading & lighting
   objectBox.init(gl);
+  robotBox.init(gl);
+  triBox.init(gl);
 	
 setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
 	
@@ -262,7 +266,47 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
 
   tick();
 }
+//variable for translation
+var x_diff_c = 0.5;
+var transX_c = 0.0;
+var transY_c = 0.0;
+var transZ_c = 0.0;
+var bodyRot = 180.0;
+var state_c = "moving"; // Possible states: "moving", "rotating", "resuming"
+var hasRotated_c = false;
+var body_rotate = 0.0;
 
+var ANGLE_STEP_C = 3.0;    // The increments of rotation angle (degrees)
+var body_rotate = 0.0;
+var g_angle0now_c  =   0.0;       // init Current rotation angle, in degrees
+var g_angle0rate_c = -64.0;       // init Rotation angle rate, in degrees/second.
+var g_angle0brake=	 1.0;				// init Speed control; 0=stop, 1=full speed.
+var g_angle0min_c  =-35.0;       // init min, max allowed angle, in degrees.
+var g_angle0max_c  =  35.0;
+                                //---------------
+var g_angle1now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle1rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle1brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle1min_c  = -50.0;       // init min, max allowed angle, in degrees
+var g_angle1max_c  =  50.0;
+
+var g_angle2now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle2rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle2brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle2min_c  = -360.0;       // init min, max allowed angle, in degrees
+var g_angle2max_c  =  360.0;
+
+var g_angle3now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle3rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle3brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle3min_c  = -30.0;       // init min, max allowed angle, in degrees
+var g_angle3max_c  =  30.0;
+
+var g_angle4now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
+var g_angle4rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle4brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
+var g_angle4min_c  = 30.0;       // init min, max allowed angle, in degrees
+var g_angle4max_c  =  90.0;
 function timerAll() {
 //=============================================================================
 // Find new values for all time-varying parameters used for on-screen drawing
@@ -278,43 +322,101 @@ function timerAll() {
     // let's pretend that only a nominal 1/30th second passed:
     elapsedMS = 1000.0/30.0;
     }
-  // Find new time-dependent parameters using the current or elapsed time:
-  // Continuous rotation:
-  // g_angleNow0 = g_angleNow0 + (g_angle0rate * elapsedMS) / 1000.0;
-  // g_angleNow1 = g_angleNow1 + (g_angle0rate * elapsedMS) / 1000.0;
-  // g_angleNow2 = g_angleNow2 + (g_angle2rate * elapsedMS) / 1000.0;
-  // g_angleNow0 %= 360.0;   // keep angle >=0.0 and <360.0 degrees  
-  // g_angleNow1 %= 360.0;   
-  // g_angleNow2 %= 360.0;
-  // if(g_angleNow1 > g_angleMax1) { // above the max?
-  //   g_angleNow1 = g_angleMax1;    // move back down to the max, and
-  //   g_angle1rate = -g_angle1rate; // reverse direction of change.
-  //   }
-  // else if(g_angleNow1 < g_angleMin1) {  // below the min?
-  //   g_angleNow1 = g_angleMin1;    // move back up to the min, and
-  //   g_angle1rate = -g_angle1rate;
-  //   }
-  // // Continuous movement:
-  // g_posNow0 += g_posRate0 * elapsedMS / 1000.0;
-  // g_posNow1 += g_posRate1 * elapsedMS / 1000.0;
-  // // apply position limits
-  // if(g_posNow0 > g_posMax0) {   // above the max?
-  //   g_posNow0 = g_posMax0;      // move back down to the max, and
-  //   g_posRate0 = -g_posRate0;   // reverse direction of change
-  //   }
-  // else if(g_posNow0 < g_posMin0) {  // or below the min? 
-  //   g_posNow0 = g_posMin0;      // move back up to the min, and
-  //   g_posRate0 = -g_posRate0;   // reverse direction of change.
-  //   }
-  // if(g_posNow1 > g_posMax1) {   // above the max?
-  //   g_posNow1 = g_posMax1;      // move back down to the max, and
-  //   g_posRate1 = -g_posRate1;   // reverse direction of change
-  //   }
-  // else if(g_posNow1 < g_posMin1) {  // or below the min? 
-  //   g_posNow1 = g_posMin1;      // move back up to the min, and
-  //   g_posRate1 = -g_posRate1;   // reverse direction of change.
-  //   }
 
+    //translate
+    if (state_c === "moving") {
+      x_diff_c=0.5;
+      // Continue moving
+      transZ_c += x_diff_c;
+      if (transZ_c >= 10) {
+        // Stop and start rotating
+        body_rotate=0;
+        hasRotated_c = false;
+        state_c = "rotating";
+      }
+    } else if (state_c === "rotating" && !hasRotated_c) {
+      // Rotate
+      x_diff_c = 0;
+      body_rotate += bodyRot * (elapsedMS * 0.001);
+      if(body_rotate >= 360){
+        hasRotated_c = true;
+
+        state_c = "moving";
+
+      }
+      else if (body_rotate >= 180 && transZ_c >=10) {
+        // Finish rotating
+        hasRotated_c = true;
+        state_c = "resuming";
+
+        
+      }
+
+    } else if (state_c === "resuming") {
+      // Resume moving in the opposite direction
+      x_diff_c = 0.5;
+      transZ_c -= x_diff_c;
+      if (transZ_c <= -10.5) {
+        // Reset for next cycle
+        state_c = "rotating";
+        hasRotated_c = false;
+        // body_rotate = 0;
+      }
+    }
+
+    g_angle0now_c += g_angle0rate_c * g_angle0brake * (elapsedMS * 0.001);	// update.
+    g_angle1now_c += g_angle1rate_c * g_angle1brake_c * (elapsedMS * 0.001);
+    g_angle2now_c += g_angle2rate_c * g_angle2brake_c * (elapsedMS * 0.001);
+    g_angle3now_c += g_angle3rate_c * g_angle3brake_c * (elapsedMS * 0.001);
+    g_angle4now_c += g_angle4rate_c * g_angle4brake_c * (elapsedMS * 0.001);
+    g_angle3now += g_angle3rate * g_angle3brake * (elapsedMS * 0.001);
+    // apply angle limits:  going above max, or below min? reverse direction!
+    // (!CAUTION! if max < min, then these limits do nothing...)
+    if((g_angle0now_c >= g_angle0max_c && g_angle0rate_c > 0) || // going over max, or
+       (g_angle0now_c <= g_angle0min_c && g_angle0rate_c < 0)  ) // going under min ?
+       g_angle0rate_c *= -1;	// YES: reverse direction.
+    if((g_angle1now_c >= g_angle1max_c && g_angle1rate_c > 0) || // going over max, or
+       (g_angle1now_c <= g_angle1min_c && g_angle1rate_c < 0) )	 // going under min ?
+       g_angle1rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle2now_c >= g_angle2max_c && g_angle2rate_c > 0) || // going over max, or
+        (g_angle2now_c <= g_angle2min_c && g_angle2rate_c < 0) )	 // going under min ?
+        g_angle2rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle3now_c >= g_angle3max_c && g_angle3rate_c > 0) || // going over max, or
+    (g_angle3now_c <= g_angle3min_c && g_angle3rate_c < 0) )	 // going under min ?
+    g_angle3rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle4now_c >= g_angle4max_c && g_angle4rate_c > 0) || // going over max, or
+    (g_angle4now_c <= g_angle4min_c && g_angle4rate_c < 0) )	 // going under min ?
+    g_angle4rate_c *= -1;	// YES: reverse direction.
+
+    if((g_angle3now >= g_angle3max && g_angle3rate > 0) || // going over max, or
+    (g_angle3now <= g_angle3min && g_angle3rate < 0) )	 // going under min ?
+    g_angle3rate *= -1;	// YES: reverse direction.
+
+
+    // *NO* limits? Don't let angles go to infinity! cycle within -180 to +180.
+    if(g_angle0min_c > g_angle0max_c)	
+    {// if min and max don't limit the angle, then
+      if(     g_angle0now_c < -180.0) g_angle0now_c += 360.0;	// go to >= -180.0 or
+      else if(g_angle0now_c >  180.0) g_angle0now_c -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle1min_c > g_angle1max_c)
+    {
+      if(     g_angle1now_c < -180.0) g_angle1now_c += 360.0;	// go to >= -180.0 or
+      else if(g_angle1now_c >  180.0) g_angle1now_c -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle2min_c > g_angle2max_c)
+    {
+      if(     g_angle2now_c < -180.0) g_angle2now_c += 360.0;	// go to >= -180.0 or
+      else if(g_angle2now_c >  180.0) g_angle2now_c -= 360.0;	// go to <= +180.0
+    }
+    if(g_angle3min_c > g_angle3max_c)
+    {
+      if(     g_angle3now_c < -180.0) g_angle3now_c += 360.0;	// go to >= -180.0 or
+      else if(g_angle3now_c >  180.0) g_angle3now_c -= 360.0;	// go to <= +180.0
+    }
   // for robot arm
   g_angle0now += g_angle0rate * g_angle0brake * (elapsedMS * 0.001);	// update.
   g_angle1now += g_angle1rate * g_angle1brake * (elapsedMS * 0.001);
@@ -405,13 +507,19 @@ var b4Wait = b4Draw - g_lastMS;
   // 	phongBox.adjust();		  // Send new values for uniforms to the GPU, and
   // 	phongBox.draw();			  // draw our VBO's contents using our shaders.
   // 	}
-  // objectBox.switchToMe();  // Set WebGL to render from this VBObox.
-  // objectBox.adjust();		  // Send new values for uniforms to the GPU, and
-  // objectBox.draw();
+  objectBox.switchToMe();  // Set WebGL to render from this VBObox.
+  objectBox.adjust();		  // Send new values for uniforms to the GPU, and
+  //objectBox.draw();
+  robotBox.switchToMe();  // Set WebGL to render from this VBObox.
+  robotBox.adjust();	
+
+  triBox.switchToMe();  // Set WebGL to render from this VBObox.
+  triBox.adjust();	
 /* // ?How slow is our own code?  	
 var aftrDraw = Date.now();
 var drawWait = aftrDraw - b4Draw;
 console.log("wait b4 draw: ", b4Wait, "drawWait: ", drawWait, "mSec");
+
 */
 }
 
