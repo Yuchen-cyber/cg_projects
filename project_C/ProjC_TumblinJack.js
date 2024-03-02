@@ -86,6 +86,7 @@ phongBox = new VBObox2();     // "  "  for second set of custom-shaded 3D parts
 objectBox = new VBObox3();
 robotBox = new VBObox4();
 triBox = new VBObox5();
+object1Box  = new VBObox6();
 
 
 
@@ -225,6 +226,7 @@ function main() {
   objectBox.init(gl);
   robotBox.init(gl);
   triBox.init(gl);
+  object1Box.init(gl);
 	
 setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
 	
@@ -515,6 +517,9 @@ var b4Wait = b4Draw - g_lastMS;
 
   triBox.switchToMe();  // Set WebGL to render from this VBObox.
   triBox.adjust();	
+
+  object1Box.switchToMe();  // Set WebGL to render from this VBObox.
+  object1Box.adjust();
 /* // ?How slow is our own code?  	
 var aftrDraw = Date.now();
 var drawWait = aftrDraw - b4Draw;
@@ -548,7 +553,7 @@ function VBO2toggle() {
 }
 // for cameras
 //for perspective view
-var camPos = new Vector3([5.0, 5.0, 3.0]);  // Camera position
+var camPos = new Vector3([6.0, 5.0, 3.0]);  // Camera position
 var camLookAt = new Vector3([0, 0, 0]); // Look-at point
 var camUp = new Vector3([0, 0, 1]);  // 'up' vector
 function setCamera() {
