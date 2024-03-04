@@ -128,8 +128,8 @@ var g_angle0max  =  40.0;
 var g_angle1now  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle1rate =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle1brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
-var g_angle1min  = -80.0;       // init min, max allowed angle, in degrees
-var g_angle1max  =  80.0;
+var g_angle1min  = -30.0;       // init min, max allowed angle, in degrees
+var g_angle1max  =  30.0;
 
 var g_angle2now  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle2rate =  64.0;				// init Rotation angle rate, in degrees/second.
@@ -154,6 +154,7 @@ var g_angle5rate =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle5brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle5min  = -360.0;       // init min, max allowed angle, in degrees
 var g_angle5max  =  360.0;
+var lightPos = new Vector3([0,0,0]); 
                                 //---------------
 
 // For mouse/keyboard:------------------------
@@ -260,6 +261,13 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
   // //------------------------------------
   // tick();                       // do it again!
   document.onkeydown = function(ev){ keydown(ev ); };
+  g_canvasID.onmousedown	=	function(ev){myMouseDown( ev, gl, g_canvasID) }; 
+  
+  					// when user's mouse button goes down call mouseDown() function
+  g_canvasID.onmousemove = 	function(ev){myMouseMove( ev, gl, g_canvasID) };
+  
+											// call mouseMove() function					
+  g_canvasID.onmouseup = 		function(ev){myMouseUp(   ev, gl, g_canvasID)};
   var tick = function() {		    
     drawResize();
     timerAll();
@@ -485,7 +493,9 @@ function drawResize() {
   
    		
 }
-
+var diffuseOff = false;
+var ambientOff = false;
+var specOff = false;
 function drawAll() {
 //=============================================================================
   // Clear on-screen HTML-5 <canvas> object:
@@ -510,7 +520,7 @@ var b4Wait = b4Draw - g_lastMS;
   // 	phongBox.draw();			  // draw our VBO's contents using our shaders.
   // 	}
   objectBox.switchToMe();  // Set WebGL to render from this VBObox.
-  objectBox.adjust();		  // Send new values for uniforms to the GPU, and
+  objectBox.adjust(diffuseOff, ambientOff, specOff);		  // Send new values for uniforms to the GPU, and
   //objectBox.draw();
   robotBox.switchToMe();  // Set WebGL to render from this VBObox.
   robotBox.adjust();	
@@ -553,7 +563,7 @@ function VBO2toggle() {
 }
 // for cameras
 //for perspective view
-var camPos = new Vector3([6.0, 5.0, 3.0]);  // Camera position
+var camPos = new Vector3([5.0, 5.0, 3.0]);  // Camera position
 var camLookAt = new Vector3([0, 0, 0]); // Look-at point
 var camUp = new Vector3([0, 0, 1]);  // 'up' vector
 function setCamera() {
@@ -743,3 +753,150 @@ function keydown(ev) {
   }
 
   }
+  
+  function DiffuseOff(){
+    diffuseOff = !diffuseOff;
+    objectBox(diffuseOff, ambientOff, specOff);
+    
+  }
+
+  function AmbientOff(){
+    ambientOff = !ambientOff;
+    objectBox(diffuseOff, ambientOff, specOff);
+    
+  }
+
+  function SpecOff(){
+    specOff = !specOff;
+    objectBox(diffuseOff, ambientOff, specOff);
+  }
+// Global vars for mouse click-and-drag for rotation.
+var isDrag=false;		// mouse-drag: true when user holds down mouse button
+var xMclik=0.0;			// last mouse button-down position (in CVV coords)
+var yMclik=0.0;   
+var xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
+var yMdragTot=0.0; 
+  function clearDrag() {
+    // Called when user presses 'Clear' button in our webpage
+      xMdragTot = 0.0;
+      yMdragTot = 0.0;
+          // REPORT updated mouse position on-screen
+      document.getElementById('Mouse').innerHTML=
+          'Mouse Drag totals (CVV coords):\t'+xMdragTot+', \t'+yMdragTot;	
+    
+      lightPos = new Vector3([0,0,0])
+      drawAll();		// update GPU uniforms &  draw the newly-updated image.
+    }
+
+
+function myMouseDown(ev, gl, canvas) {
+  //==============================================================================
+  // Called when user PRESSES down any mouse button;
+  // 									(Which button?    console.log('ev.button='+ev.button);   )
+  // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+  //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+  
+  // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+    var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+    var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+    var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+  //  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
+    
+    // Convert to Canonical View Volume (CVV) coordinates too:
+    var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                  (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+    var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                  (canvas.height/2);
+  //	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+    
+    isDrag = true;											// set our mouse-dragging flag
+    xMclik = x;													// record where mouse-dragging began
+    yMclik = y;
+  };
+      
+      
+function myMouseMove(ev, gl, canvas) {
+//==============================================================================
+// Called when user MOVES the mouse with a button already pressed down.
+// 									(Which button?   console.log('ev.button='+ev.button);    )
+// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+
+  if(isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
+
+  // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+  var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+//  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+  
+  // Convert to Canonical View Volume (CVV) coordinates too:
+  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+  var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                (canvas.height/2);
+//	console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
+
+//Mouse-Drag Moves Lamp0 ========================================================
+  // Use accumulated mouse-dragging to change the global var 'lightPos';
+  // (note how accumulated mouse-dragging sets xmDragTot, ymDragTot below:
+  //  use the same method to change the y,z coords of lamp0Pos)
+
+  console.log('lightPos.elements[0] = ', lightPos.elements[0], '\n');
+  lightPos.elements.set([	
+          lightPos.elements[0],
+          lightPos.elements[1] + 4.0*(x-xMclik),	// Horiz drag: change world Y
+          lightPos.elements[2] + 4.0*(y-yMclik) 	// Vert. drag: change world Z
+                          ]);
+  /* OLD
+  lamp0Pos.set([lamp0Pos[0],										// don't change world x;
+                lamp0Pos[1] + 4.0*(x - xMclik),		// Horiz drag*4 changes world y
+                lamp0Pos[2] + 4.0*(y - yMclik)]);	// Vert drag*4 changes world z
+*/ 
+drawAll();				// re-draw the image using this updated uniform's value
+// REPORT new lamp0 position on-screen
+    document.getElementById('Mouse').innerHTML=
+      'Lamp0 position(x,y,z):\t('+ lightPos.elements[0].toFixed(5) +
+                            '\t' + lightPos.elements[0].toFixed(5) +
+                            '\t' + lightPos.elements[0].toFixed(5) + ')';	
+  
+//END=====================================================================
+
+  // find how far we dragged the mouse:
+  xMdragTot += (x - xMclik);					// Accumulate change-in-mouse-position,&
+  yMdragTot += (y - yMclik);
+  xMclik = x;													// Make next drag-measurement from here.
+  yMclik = y;
+  
+/*	  // REPORT updated mouse position on-screen
+    document.getElementById('Mouse').innerHTML=
+      'Mouse Drag totals (CVV coords):\t'+xMdragTot+', \t'+yMdragTot;	
+*/
+};
+      
+function myMouseUp(ev, gl, canvas) {
+//==============================================================================
+// Called when user RELEASES mouse button pressed previously.
+// 									(Which button?   console.log('ev.button='+ev.button);    )
+// 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+//		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+
+// Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+  var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+  var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+  var yp = canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+//  console.log('myMouseUp  (pixel coords): xp,yp=\t',xp,',\t',yp);
+  
+  // Convert to Canonical View Volume (CVV) coordinates too:
+  var x = (xp - canvas.width/2)  / 		// move origin to center of canvas and
+                (canvas.width/2);			// normalize canvas to -1 <= x < +1,
+  var y = (yp - canvas.height/2) /		//										 -1 <= y < +1.
+                (canvas.height/2);
+  console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
+  
+  isDrag = false;											// CLEAR our mouse-dragging flag, and
+  // accumulate any final bit of mouse-dragging we did:
+  xMdragTot += (x - xMclik);
+  yMdragTot += (y - yMclik);
+  console.log('myMouseUp: xMdragTot,yMdragTot =',xMdragTot,',\t',yMdragTot);
+};

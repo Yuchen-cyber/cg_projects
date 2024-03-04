@@ -28,11 +28,14 @@
 
 		You can press<b> 'd' </b>key on keyboard to move the camera to the right.
 		<br>
+
     <p>
-      <button type="button" onclick="VBO0toggle()">VBO-0 hide/show</button>
-      <button type="button" onclick="VBO1toggle()">VBO-1 hide/show</button>
-      <button type="button" onclick="VBO2toggle()">VBO-2 hide/show</button>
+      <button type="button" onclick="DiffuseOff()">Diffuse On/Off</button>
+      <button type="button" onclick="AmbientOff()">Ambient On/Off</button>
+      <button type="button" onclick="SpecOff()">Specular On/Off</button>
     </p>
+    <div id='Mouse'> Mouse Drag totals (CVV coords) </div>
+		<button type="button" onClick='clearDrag()'>Clear</button>
     <script src="lib/webgl-utils.js"></script>
     <script src="lib/webgl-debug.js"></script>
     <script src="lib/cuon-utils.js"></script>

@@ -2191,6 +2191,13 @@ function VBObox3() {
     this.VERT_SRC =	//--------------------- VERTEX SHADER source code 
    `precision highp float;				// req'd in OpenGL ES if we use 'float'
     //
+    struct MatlT {		// Describes one Phong material by its reflectances:
+			vec3 emit;			// Ke: emissive -- surface 'glow' amount (r,g,b);
+			vec3 ambi;			// Ka: ambient reflectance (r,g,b)
+			vec3 diff;			// Kd: diffuse reflectance (r,g,b)
+			vec3 spec; 		// Ks: specular reflectance (r,g,b)
+			int shiny;			// Kshiny: specular exponent (integer >= 1; typ. <200)
+  		};
     uniform mat4 u_ModelMatrix;
     attribute vec4 a_Pos1;
     attribute vec4 a_Normal;
@@ -2207,7 +2214,7 @@ function VBObox3() {
 
     //
     void main() {
-      gl_Position = u_ModelMatrix * a_Pos1;
+      gl_Position = u_MvpMatrix * a_Pos1;
       v_Position = u_ModelMatrix * a_Pos1;
       v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
       v_Kd = u_Kd;
@@ -2223,7 +2230,7 @@ function VBObox3() {
   //   You too can be a 'shader writer'! What other fragment shaders would help?
 
    // a) SQUARE points:
-    this.FRAG_SRC = //---------------------- FRAGMENT SHADER source code 
+   this.FRAG_SRC = //---------------------- FRAGMENT SHADER source code 
    `#ifdef GL_ES
    precision mediump float;
    #endif
@@ -2235,6 +2242,7 @@ function VBObox3() {
   uniform vec3 u_Ke;						// Phong Reflectance: emissive
   uniform vec4 u_Lamp0Pos; 
   uniform vec4 u_eyePosWorld;
+  uniform float shininess;
 
   varying vec3 v_Normal;				// Find 3D surface normal at each pix
   varying vec4 v_Position;			// pixel's 3D pos too -- in 'world' coords
@@ -2244,20 +2252,23 @@ function VBObox3() {
       vec3 normal = normalize(v_Normal); 
       vec3 lightDirection = normalize(u_Lamp0Pos.xyz - v_Position.xyz);
       vec3 eyeDirection = normalize(u_eyePosWorld.xyz- v_Position.xyz); 
-	    vec3 H = normalize(lightDirection + eyeDirection); 
+      vec3 H = normalize(lightDirection + eyeDirection); 
       float nDotH = max(dot(H, normal), 0.0); 
-      float e02 = nDotH*nDotH; 
-	  float e04 = e02*e02; 
-	  float e08 = e04*e04; 
-		float e16 = e08*e08; 
-		float e32 = e16*e16;  
-		float e64 = e32*e32;
+      float e02 = pow(nDotH, shininess); 
+    float e04 = e02*e02; 
+    float e08 = e04*e04; 
+    float e16 = e08*e08; 
+    float e32 = e16*e16;  
+    float e64 = pow(nDotH, shininess);
     vec3 emissive = u_Ke;
       float nDotL = max(dot(lightDirection, normal), 0.0);
       // Calculate the color due to diffuse reflection
      vec3 diffuse = u_DiffuseLight * nDotL * v_Kd;
       // Calculate the color due to ambient reflection
      vec3 ambient = u_AmbientLight * u_Ka;
+
+    vec3 reflectDir = reflect(-lightDirection, normal);
+    float spec = pow(nDotL, shininess);
      vec3 speculr = u_Lamp0Spec * u_Ks * e64;
       // Add the surface colors due to diffuse reflection and ambient reflection
       gl_FragColor = vec4(diffuse + ambient + speculr + emissive, 1);
@@ -2381,6 +2392,8 @@ function VBObox3() {
     this.a_Colr1Loc;							// GPU location: shader 'a_Colr1' attribute
     this.a_normalLoc;
     this.u_NormalMatrix;
+    this.u_MvpMatrixLoc;
+
     
                 //---------------------- Uniform locations &values in our shaders
     this.ModelMatrix = new Matrix4();	// Transforms CVV axes to model axes.
@@ -2394,6 +2407,7 @@ function VBObox3() {
     this.u_Lamp0Spec;
     this.u_Ke;
     this.u_eyePosWorld;
+    this.shininess;
 
 
   };
@@ -2489,12 +2503,14 @@ function VBObox3() {
     this.u_Lamp0Pos = gl.getUniformLocation(this.shaderLoc, 'u_Lamp0Pos');
     this.u_eyePosWorld = gl.getUniformLocation(this.shaderLoc, 'u_eyePosWorld');
     this.u_NormalMatrix = gl.getUniformLocation(this.shaderLoc, 'u_NormalMatrix')
+    this.u_MvpMatrixLoc = gl.getUniformLocation(this.shaderLoc, 'u_MvpMatrix');
 
     //material
     this.u_Ka = gl.getUniformLocation(this.shaderLoc, 'u_Ka');
     this.u_Kd = gl.getUniformLocation(this.shaderLoc, 'u_Kd');
     this.u_Ks = gl.getUniformLocation(this.shaderLoc, 'u_Ks');
     this.u_Ke = gl.getUniformLocation(this.shaderLoc, 'u_Ke');
+    this.shininess = gl.getUniformLocation(this.shaderLoc, 'shininess');
 
     if(!this.u_Ke || !this.u_Ka || !this.u_Kd 
       //		 || !u_Ks || !u_Kshiny
@@ -2634,7 +2650,7 @@ function VBObox3() {
     return isOK;
   }
   
-  VBObox3.prototype.adjust = function() {
+  VBObox3.prototype.adjust = function(diffuseOff, ambientOff, specOff) {
   //==============================================================================
   // Update the GPU to newer, current values we now store for 'uniform' vars on 
   // the GPU; and (if needed) update each attribute's stride and offset in VBO.
@@ -2647,120 +2663,207 @@ function VBObox3() {
     // Set the light color (white)
   
   // Set the light direction (in the world coordinate)
-  gl.uniform4f(this.u_Lamp0Pos, 0,0,0, 1.0);
-  gl.uniform3f(this.u_Lamp0Spec, 1,1,1);
-  gl.uniform4f(this.u_eyePosWorld, 0,0,0, 1);
+
+  gl.uniform4f(this.u_Lamp0Pos, lightPos.elements[0],lightPos.elements[1],lightPos.elements[2], 1.0);
+  if (specOff){
+    gl.uniform3f(this.u_Lamp0Spec, 0,0,0);
+  }else{
+    gl.uniform3f(this.u_Lamp0Spec, 1,1,1);
+  }
+  
+  gl.uniform4f(this.u_eyePosWorld, camPos.elements[0],camPos.elements[1],camPos.elements[2], 1);
   // Set the ambient light
-  gl.uniform3f(this.u_AmbientLight, 0.4, 0.4, 0.4);
-  gl.uniform3f(this.u_DiffuseLight, 1.0, 0.0, 0.0);
+  if (ambientOff){
+    gl.uniform3f(this.u_AmbientLight, 0, 0, 0);
+  }else{
+    gl.uniform3f(this.u_AmbientLight, 0.4, 0.4, 0.4);
+  }
+  
+
+  if(diffuseOff){
+    gl.uniform3f(this.u_DiffuseLight, 0.0, 0.0, 0.0);
+  }else{
+    gl.uniform3f(this.u_DiffuseLight, 1.0, 0.0, 0.0);
+  }
+  
   gl.uniform3f(this.u_Ka, 1, 0, 0);
   gl.uniform3f(this.u_Kd,1, 1, 0.0);
   gl.uniform3f(this.u_Ks, 0.8, 0.8, 0.8);
   gl.uniform3f(this.u_Ke, 0.0, 0.0, 0.0);
+  gl.uniform1f(this.shininess, 50.0);
   
     // Adjust values for our uniforms,
     this.ModelMatrix.setIdentity();
-  // THIS DOESN'T WORK!!  this.ModelMatrix = g_worldMat;
-    this.ModelMatrix.set(g_worldMat);
-    this.ModelMatrix.rotate(90, 1, 0, 0);
-    // //this.ModelMatrix.rotate(g_angle1now, 0, 1, 0);	// -spin drawing axes,
-    this.ModelMatrix.translate(2.0, 0.0, 5);	
+ 
+    this.ModelMatrix.scale(0.8, 0.8, 0.8);
+    // pushMatrix(g_modelMatrix_b);  // SAVE world drawing coords.
     pushMatrix(this.ModelMatrix);
-    this.ModelMatrix.scale(0.5, 0.2, 0.5);	
-    // this.ModelMatrix.rotate(g_angle1now, 0, 0, 1);					// then translate them.
-    //  Transfer new uniforms' values to the GPU:-------------
-    // Send  new 'ModelMat' values to the GPU's 'u_ModelMat1' uniform:  
-    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
-                        false, 										// use matrix transpose instead?
-                        this.ModelMatrix.elements);	// send data from Javascript.
-                        var normalMatrix = new Matrix4(); 
-                        normalMatrix.setInverseOf(this.ModelMatrix);
-                        normalMatrix.transpose();
-                        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts);
-        
-    this.ModelMatrix = popMatrix();
-    
-    var arm1Length = 10.0; // Length of arm1
-        this.ModelMatrix.translate(0, 0.4, 0.0);
-        this.ModelMatrix.rotate(g_angle0now, 0.0, 1.0, 0.0);    // Rotate around the y-axis
-        ////drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
+      //---------Draw Ground Plane, without spinning.
+      // position it.
+      this.ModelMatrix.translate( 0.4, -0.4, 0.0);	
+      // g_modelMatrix_b.scale(0.1, 0.1, 0.1);				// shrink by 10X:
+      this.ModelMatrix.rotate(90, 1.0, 0.0, 0.0);
+  
+      
+      //draw robot arm
+      
+      this.ModelMatrix.setTranslate(3.0, -6, 0.1);
         pushMatrix(this.ModelMatrix);
-
-        this.ModelMatrix.scale(0.2, 0.5, 0.2);
+      
+        // this.ModelMatrix.scale(0.05,  0.05,0.005); // Make it a little thicker
+      
+        this.ModelMatrix = popMatrix(); 
+        this.ModelMatrix.scale(0.6,  1,0.05);
+        //this.ModelMatrix.scale(0.05, 0.05, 1.25);
         gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
                         false, 										// use matrix transpose instead?
-                        this.ModelMatrix.elements);	// send data from Javascript.
-                        normalMatrix.setInverseOf(this.ModelMatrix);
-                        normalMatrix.transpose();
-                        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts); // Draw
-  // Arm2
-  this.ModelMatrix = popMatrix();
-  this.ModelMatrix.translate(0, 1, 0.0);
-  this.ModelMatrix.rotate(g_angle1now, 0.0, 0.0, 1.0);    // Rotate around the y-axis
-  ////drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
-  this.ModelMatrix.scale(0.25, 0.5, 0.25);
-  gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
-                  false, 										// use matrix transpose instead?
-                  this.ModelMatrix.elements);	// send data from Javascript.
-                  normalMatrix.setInverseOf(this.ModelMatrix);
-                  normalMatrix.transpose();
-                  gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts); // Draw
-  pushMatrix(this.ModelMatrix);
-  
-  //     // Arm3
-      this.ModelMatrix.translate(0.0, 2, 0.0);
-      // this.ModelMatrix.rotate(180, 0.0, 1.0, 0.0);   　　　
-      this.ModelMatrix.rotate(g_angle4now, 0.0, 1.0, 0.0);  
-      ////drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
-      pushMatrix(this.ModelMatrix);
-      this.ModelMatrix.scale(0.8, 0.08, 1.2); 
+                        this.ModelMatrix.elements);	
+      var mvpMatrix = new Matrix4();
+      mvpMatrix.setIdentity();
+      mvpMatrix.set(g_worldMat);
+      mvpMatrix.multiply(this.ModelMatrix);
+      // console.log(mvpMatrix)
+      // Pass the model view projection matrix to u_mvpMatrix
+      gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
       gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
       false, 										// use matrix transpose instead?
-      this.ModelMatrix.elements);	
+      this.ModelMatrix.elements);	// send data from Javascript.
+      var normalMatrix = new Matrix4();
       normalMatrix.setInverseOf(this.ModelMatrix);
-      normalMatrix.transpose();
-      gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts); // Draw
+                        normalMatrix.transpose();
+                        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+              drawBox(gl, 0, this.vboVerts);
+    this.ModelMatrix = popMatrix(); 
+    
+    // Arm1
+    var arm1Length = 10.0; // Length of arm1
+    this.ModelMatrix.translate(4, -6, 1);
+    this.ModelMatrix.rotate(g_angle0now, 0.0, 0.0, 1.0);    // Rotate around the y-axis
+    pushMatrix(this.ModelMatrix);
 
-      this.ModelMatrix = popMatrix();
-      pushMatrix(this.ModelMatrix);
-    //Tongs2
-        this.ModelMatrix.translate(0, 0,1.0);
-        this.ModelMatrix.rotate(g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
-        ////drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
-        this.ModelMatrix.scale(0.3, 0.2, 0.3); // Make it a little thicker
-        gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
-                  false, 										// use matrix transpose instead?
-                  this.ModelMatrix.elements);	
-                  normalMatrix.setInverseOf(this.ModelMatrix);
-                  normalMatrix.transpose();
-                  gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts);
-        this.ModelMatrix = popMatrix();
-    //     //Tongs2
-        this.ModelMatrix.translate(0, 0,-1.0);
-        this.ModelMatrix.rotate(-g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
-        ////drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
-        this.ModelMatrix.scale(0.3, 0.2, 0.3); // Make it a little thicker
-        gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
-                  false, 										// use matrix transpose instead?
-                  this.ModelMatrix.elements);	
-                  normalMatrix.setInverseOf(this.ModelMatrix);
-                  normalMatrix.transpose();
-                  gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
-        drawBox(gl, 0, this.vboVerts);
+    this.ModelMatrix.scale(0.25, 0.25, 0.5);
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	
+    
+    mvpMatrix.set(g_worldMat);
+    mvpMatrix.multiply(this.ModelMatrix);
+    // console.log(mvpMatrix)
+    // Pass the model view projection matrix to u_mvpMatrix
+    gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	// send data from Javascript.
+    normalMatrix.setInverseOf(this.ModelMatrix);
+        normalMatrix.transpose();
+        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+    drawBox(gl, 0, this.vboVerts);
 
+    //this.ModelMatrix = popMatrix();
+    pushMatrix(this.ModelMatrix);
+    // Arm2
+    this.ModelMatrix.translate(-2.0, -0.3, 2);
+    this.ModelMatrix.rotate(g_angle1now, 0.0, 1.0, 0.0);  // Rotate around the z-axis
+    pushMatrix(this.ModelMatrix);
+    this.ModelMatrix.scale(1.3, 1.3, 0.8); 　　　// Move to joint1
+   
+    //this.ModelMatrix.scale(2, 2.0, 2); // Make it a little thicker
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	
+
+    mvpMatrix.set(g_worldMat);
+    mvpMatrix.multiply(this.ModelMatrix);
+    // console.log(mvpMatrix)
+    // Pass the model view projection matrix to u_mvpMatrix
+    gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	// send data from Javascript.
+    normalMatrix.setInverseOf(this.ModelMatrix);
+        normalMatrix.transpose();
+        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+    drawBox(gl, 0, this.vboVerts);
+  
+    pushMatrix(this.ModelMatrix);
+    // Arm3
+    this.ModelMatrix.translate(-1.5, 1, 0);
+    // g_modelMatrix_b.rotate(180, 0.0, 1.0, 0.0);  
+    this.ModelMatrix.rotate(90, 0.0, 0.0, 1.0);   　　　
+    this.ModelMatrix.rotate(g_angle4now, 0.0, 1.0, 0.0);  
+    
+    pushMatrix(this.ModelMatrix);
+    this.ModelMatrix.scale(0.8, 0.08, 1.2); 
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	
+
+    mvpMatrix.set(g_worldMat);
+    mvpMatrix.multiply(this.ModelMatrix);
+    // console.log(mvpMatrix)
+    // Pass the model view projection matrix to u_mvpMatrix
+    gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	// send data from Javascript.
+    normalMatrix.setInverseOf(this.ModelMatrix);
+        normalMatrix.transpose();
+        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+    drawBox(gl, 0, this.vboVerts);
+  
+
+    this.ModelMatrix = popMatrix();
+    pushMatrix(this.ModelMatrix);
+
+     //Tongs1
+     this.ModelMatrix.translate(0, 0,1.0);
+     this.ModelMatrix.rotate(g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
+
+     this.ModelMatrix.scale(0.3, 0.2, 0.3); // Make it a little thicker
+     gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	
+
+    mvpMatrix.set(g_worldMat);
+    mvpMatrix.multiply(this.ModelMatrix);
+    // console.log(mvpMatrix)
+    // Pass the model view projection matrix to u_mvpMatrix
+    gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
+    gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+    false, 										// use matrix transpose instead?
+    this.ModelMatrix.elements);	// send data from Javascript.
+    normalMatrix.setInverseOf(this.ModelMatrix);
+        normalMatrix.transpose();
+        gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+    drawBox(gl, 0, this.vboVerts);
+     this.ModelMatrix = popMatrix();
+//Tongs2
+this.ModelMatrix.translate(0, 0,-1.0);
+this.ModelMatrix.rotate(-g_angle2now, 1.0, 0.0, 0.0);  // Rotate around the x-axis
+    
+     this.ModelMatrix.scale(0.3, 0.2, 0.3); // Make it a little thicker
+     gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+     false, 										// use matrix transpose instead?
+     this.ModelMatrix.elements);	
+ 
+     mvpMatrix.set(g_worldMat);
+     mvpMatrix.multiply(this.ModelMatrix);
+     // console.log(mvpMatrix)
+     // Pass the model view projection matrix to u_mvpMatrix
+     gl.uniformMatrix4fv(this.u_MvpMatrixLoc, false, mvpMatrix.elements);
+     gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
+     false, 										// use matrix transpose instead?
+     this.ModelMatrix.elements);	// send data from Javascript.
+     normalMatrix.setInverseOf(this.ModelMatrix);
+         normalMatrix.transpose();
+         gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
+     drawBox(gl, 0, this.vboVerts);
         
     
-    //this.draw();
 
-
-  
-  //drawline(gl_c, n, viewProjMatrix_c, u_MvpMatrix, axes_start/floatsPerVertex, axesVertices.length/floatsPerVertex);
   }
+
+
   
   VBObox3.prototype.draw = function() {
   //=============================================================================
@@ -3838,7 +3941,7 @@ function VBObox3() {
         uniform vec3 u_Ke;						// Phong Reflectance: emissive
         uniform vec4 u_Lamp0Pos; 
         uniform vec4 u_eyePosWorld;
-        float shininess;
+        uniform float shininess;
       
         varying vec3 v_Normal;				// Find 3D surface normal at each pix
         varying vec4 v_Position;			// pixel's 3D pos too -- in 'world' coords
@@ -3850,12 +3953,12 @@ function VBObox3() {
             vec3 eyeDirection = normalize(u_eyePosWorld.xyz- v_Position.xyz); 
             vec3 H = normalize(lightDirection + eyeDirection); 
             float nDotH = max(dot(H, normal), 0.0); 
-            float e02 = nDotH*nDotH; 
+            float e02 = pow(nDotH, shininess); 
           float e04 = e02*e02; 
           float e08 = e04*e04; 
           float e16 = e08*e08; 
           float e32 = e16*e16;  
-          float e64 = e32*e32;
+          float e64 = pow(nDotH, shininess);
           vec3 emissive = u_Ke;
             float nDotL = max(dot(lightDirection, normal), 0.0);
             // Calculate the color due to diffuse reflection
@@ -3865,7 +3968,7 @@ function VBObox3() {
 
           vec3 reflectDir = reflect(-lightDirection, normal);
           float spec = pow(nDotL, shininess);
-           vec3 speculr = u_Lamp0Spec * u_Ks * e64 * spec;
+           vec3 speculr = u_Lamp0Spec * u_Ks * e64;
             // Add the surface colors due to diffuse reflection and ambient reflection
             gl_FragColor = vec4(diffuse + ambient + speculr + emissive, 1);
           }`;
@@ -4196,7 +4299,7 @@ function VBObox3() {
           gl.uniform3f(this.u_Kd,0.75164, 0.60648, 0.22648);
           gl.uniform3f(this.u_Ks, 0.628281, 0.555802, 0.366065);
           gl.uniform3f(this.u_Ke, 0.0, 0.0, 0.0);
-          gl.uniform1f(this.shininess, 50.2);
+          gl.uniform1f(this.shininess, 2);
           
           
           // Adjust values for our uniforms,
@@ -4227,9 +4330,8 @@ function VBObox3() {
       // this.ModelMatrix.rotate(10, 0.0, 1, 0);
       this.ModelMatrix.rotate(60, 0.0, 1, 0);
       this.ModelMatrix.scale(0.5, 0.5, 0.5);
-      gl.uniform1f(this.shininess, 32.2)
       pushMatrix(this.ModelMatrix);
-      //this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
+      this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
       //console.log(g_angle2now_c)
       gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
                         false, 										// use matrix transpose instead?
@@ -4248,21 +4350,21 @@ function VBObox3() {
                         normalMatrix.transpose();
                         gl.uniformMatrix4fv(this.u_NormalMatrix, false, normalMatrix.elements);
               drawBox(gl, 0, this.vboVerts);
-              var lightDirection = this.u_Lamp0Pos.xyz - (this.ModelMatrix*this.a_Pos1).xyz;
-          console.log(this.a_Pos1)
+
       //second triangle   
       this.ModelMatrix = popMatrix();
       pushMatrix(this.ModelMatrix);
       
       // Set the ambient light
       gl.uniform3f(this.u_AmbientLight, 0.2, 0.2, 0.2);
-      gl.uniform3f(this.u_DiffuseLight, 1, 0, 0.0);
+      gl.uniform3f(this.u_DiffuseLight, 0, 1, 0.0);
       gl.uniform3f(this.u_Ka, 0.1, 0.1, 0.1);
       gl.uniform3f(this.u_Kd,0.5, 0.0, 0.0);
       gl.uniform3f(this.u_Ks, 0.7, 0.6, 0.6);
       gl.uniform3f(this.u_Ke, 0, 0.0, 0.0);// send data from Javascript.
+      gl.uniform1f(this.shininess, 10);
       this.ModelMatrix.translate(-1.5, 1, 0);
-      //this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
+      this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
       //this.ModelMatrix.scale(0.5, 0.5, 0.5);
       gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
                         false, 										// use matrix transpose instead?
@@ -4285,13 +4387,14 @@ this.ModelMatrix = popMatrix();
 
 // Set the ambient light
 gl.uniform3f(this.u_AmbientLight, 0.8, 0.8, 0.8);
-gl.uniform3f(this.u_DiffuseLight, 1, 0, 0);
+gl.uniform3f(this.u_DiffuseLight, 0, 0, 1);
 gl.uniform3f(this.u_Ka, 0.1, 0, 0);
 gl.uniform3f(this.u_Kd,0.2, 0.2, 0.2);
 gl.uniform3f(this.u_Ks, 0.2, 0.2, 0.2);
 gl.uniform3f(this.u_Ke, 0, 0.0, 0.0);// send data from Javascript.
+gl.uniform1f(this.shininess, 50);
 this.ModelMatrix.translate(-1, 1, 2);
-//this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
+this.ModelMatrix.rotate(g_angle2now_c, 0.0, 1, 0);
 //this.ModelMatrix.scale(0.5, 0.5, 0.5);
 gl.uniformMatrix4fv(this.u_ModelMatrixLoc,	// GPU location of the uniform
                   false, 										// use matrix transpose instead?
