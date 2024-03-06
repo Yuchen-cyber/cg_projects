@@ -82,11 +82,12 @@ var g_canvasID;									// HTML-5 'canvas' element ID#
 // For multiple VBOs & Shaders:-----------------
 worldBox = new VBObox0();		  // Holds VBO & shaders for 3D 'world' ground-plane grid, etc;
 gouraudBox = new VBObox1();		  // "  "  for first set of custom-shaded 3D parts
-phongBox = new VBObox2();     // "  "  for second set of custom-shaded 3D parts
+// phongBox = new VBObox2();     // "  "  for second set of custom-shaded 3D parts
 objectBox = new VBObox3();
 robotBox = new VBObox4();
 triBox = new VBObox5();
 object1Box  = new VBObox6();
+var phongLightValue = 0;
 
 
 
@@ -223,7 +224,7 @@ function main() {
   worldBox.init(gl);		// VBO + shaders + uniforms + attribs for our 3D world,
                         // including ground-plane,                       
   gouraudBox.init(gl);		//  "		"		"  for 1st kind of shading & lighting
-	phongBox.init(gl);    //  "   "   "  for 2nd kind of shading & lighting
+	// phongBox.init(gl);    //  "   "   "  for 2nd kind of shading & lighting
   objectBox.init(gl);
   robotBox.init(gl);
   triBox.init(gl);
@@ -268,7 +269,12 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
   
 											// call mouseMove() function					
   g_canvasID.onmouseup = 		function(ev){myMouseUp(   ev, gl, g_canvasID)};
-  var tick = function() {		    
+  document.getElementById('phongLightingSelect').addEventListener('change', function(event) {
+    // Retrieve the selected value ('0' or '1') and convert it to an integer
+    phongLightValue = parseInt(event.target.value, 10);
+  });
+  var tick = function() {		
+        
     drawResize();
     timerAll();
     requestAnimationFrame(tick, gl);  
@@ -756,19 +762,16 @@ function keydown(ev) {
   
   function DiffuseOff(){
     diffuseOff = !diffuseOff;
-    objectBox(diffuseOff, ambientOff, specOff);
     
   }
 
   function AmbientOff(){
     ambientOff = !ambientOff;
-    objectBox(diffuseOff, ambientOff, specOff);
     
   }
 
   function SpecOff(){
     specOff = !specOff;
-    objectBox(diffuseOff, ambientOff, specOff);
   }
 // Global vars for mouse click-and-drag for rotation.
 var isDrag=false;		// mouse-drag: true when user holds down mouse button
