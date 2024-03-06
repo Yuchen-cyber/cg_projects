@@ -154,7 +154,7 @@ var g_angle5rate =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle5brake=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
 var g_angle5min  = -360.0;       // init min, max allowed angle, in degrees
 var g_angle5max  =  360.0;
-var lightPos = new Vector3([0,0,0]); 
+var lightPos = new Vector3([6,2,10]); 
                                 //---------------
 
 // For mouse/keyboard:------------------------
@@ -297,8 +297,8 @@ var g_angle0max_c  =  35.0;
 var g_angle1now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle1rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
 var g_angle1brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
-var g_angle1min_c  = -50.0;       // init min, max allowed angle, in degrees
-var g_angle1max_c  =  50.0;
+var g_angle1min_c  = -30.0;       // init min, max allowed angle, in degrees
+var g_angle1max_c  =  30.0;
 
 var g_angle2now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle2rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
@@ -307,10 +307,10 @@ var g_angle2min_c  = -360.0;       // init min, max allowed angle, in degrees
 var g_angle2max_c  =  360.0;
 
 var g_angle3now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
-var g_angle3rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
+var g_angle3rate_c =  30.0;				// init Rotation angle rate, in degrees/second.
 var g_angle3brake_c=	 1.0;				// init Rotation start/stop. 0=stop, 1=full speed.
-var g_angle3min_c  = -30.0;       // init min, max allowed angle, in degrees
-var g_angle3max_c  =  30.0;
+var g_angle3min_c  = -10.0;       // init min, max allowed angle, in degrees
+var g_angle3max_c  =  10.0;
 
 var g_angle4now_c  =   0.0; 			// init Current rotation angle, in degrees > 0
 var g_angle4rate_c =  64.0;				// init Rotation angle rate, in degrees/second.
@@ -522,11 +522,11 @@ var b4Wait = b4Draw - g_lastMS;
   objectBox.switchToMe();  // Set WebGL to render from this VBObox.
   objectBox.adjust(diffuseOff, ambientOff, specOff);		  // Send new values for uniforms to the GPU, and
   //objectBox.draw();
-  robotBox.switchToMe();  // Set WebGL to render from this VBObox.
-  robotBox.adjust();	
+  // robotBox.switchToMe();  // Set WebGL to render from this VBObox.
+  // robotBox.adjust();	
 
-  triBox.switchToMe();  // Set WebGL to render from this VBObox.
-  triBox.adjust();	
+  // triBox.switchToMe();  // Set WebGL to render from this VBObox.
+  // triBox.adjust();	
 
   object1Box.switchToMe();  // Set WebGL to render from this VBObox.
   object1Box.adjust();
@@ -784,7 +784,7 @@ var yMdragTot=0.0;
       document.getElementById('Mouse').innerHTML=
           'Mouse Drag totals (CVV coords):\t'+xMdragTot+', \t'+yMdragTot;	
     
-      lightPos = new Vector3([0,0,0])
+      lightPos = new Vector3([6,2,10])
       drawAll();		// update GPU uniforms &  draw the newly-updated image.
     }
 
@@ -857,8 +857,8 @@ drawAll();				// re-draw the image using this updated uniform's value
 // REPORT new lamp0 position on-screen
     document.getElementById('Mouse').innerHTML=
       'Lamp0 position(x,y,z):\t('+ lightPos.elements[0].toFixed(5) +
-                            '\t' + lightPos.elements[0].toFixed(5) +
-                            '\t' + lightPos.elements[0].toFixed(5) + ')';	
+                            '\t' + lightPos.elements[1].toFixed(5) +
+                            '\t' + lightPos.elements[2].toFixed(5) + ')';	
   
 //END=====================================================================
 
