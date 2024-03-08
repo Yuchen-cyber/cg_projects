@@ -87,7 +87,12 @@ objectBox = new VBObox3();
 robotBox = new VBObox4();
 triBox = new VBObox5();
 object1Box  = new VBObox6();
+objectGBox = new VBObox7();
+object1GBox = new VBObox8();
+sphereGBox = new VBObox9();
+
 var phongLightValue = 0;
+var phongShadeValue = 0;
 
 
 
@@ -229,6 +234,9 @@ function main() {
   robotBox.init(gl);
   triBox.init(gl);
   object1Box.init(gl);
+  objectGBox.init(gl);
+  object1GBox.init(gl);
+  sphereGBox.init(gl);
 	
 setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
 	
@@ -270,8 +278,10 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
 											// call mouseMove() function					
   g_canvasID.onmouseup = 		function(ev){myMouseUp(   ev, gl, g_canvasID)};
   document.getElementById('phongLightingSelect').addEventListener('change', function(event) {
-    // Retrieve the selected value ('0' or '1') and convert it to an integer
     phongLightValue = parseInt(event.target.value, 10);
+  });
+  document.getElementById('phongShadingSelect').addEventListener('change', function(event) {
+    phongShadeValue = parseInt(event.target.value, 10);
   });
   var tick = function() {		
         
@@ -515,27 +525,45 @@ var b4Wait = b4Draw - g_lastMS;
 		worldBox.adjust();		  // Send new values for uniforms to the GPU, and
 		worldBox.draw();			  // draw our VBO's contents using our shaders.
   }
-  if(g_show1 == 1) { // IF user didn't press HTML button to 'hide' VBO1:
+  if (phongShadeValue ==0){
     gouraudBox.switchToMe();  // Set WebGL to render from this VBObox.
   	gouraudBox.adjust();		  // Send new values for uniforms to the GPU, and
-  	gouraudBox.draw();			  // draw our VBO's contents using our shaders.
-	  }
+  	gouraudBox.draw();		
+  }else{
+    sphereGBox.switchToMe();
+    sphereGBox.adjust();		  // Send new values for uniforms to the GPU, and
+  	sphereGBox.draw();	
+  }
+
 	// if(g_show2 == 1) { // IF user didn't press HTML button to 'hide' VBO2:
 	//   phongBox.switchToMe();  // Set WebGL to render from this VBObox.
   // 	phongBox.adjust();		  // Send new values for uniforms to the GPU, and
   // 	phongBox.draw();			  // draw our VBO's contents using our shaders.
   // 	}
-  objectBox.switchToMe();  // Set WebGL to render from this VBObox.
-  objectBox.adjust(diffuseOff, ambientOff, specOff);		  // Send new values for uniforms to the GPU, and
+  //phongShadeValue = 0;
+  if (phongShadeValue == 0){
+    objectBox.switchToMe();  // Set WebGL to render from this VBObox.
+    objectBox.adjust(diffuseOff, ambientOff, specOff);	
+  }else{
+    objectGBox.switchToMe();
+    objectGBox.adjust();
+  }
+
+  
   //objectBox.draw();
   // robotBox.switchToMe();  // Set WebGL to render from this VBObox.
   // robotBox.adjust();	
 
   // triBox.switchToMe();  // Set WebGL to render from this VBObox.
   // triBox.adjust();	
-
-  object1Box.switchToMe();  // Set WebGL to render from this VBObox.
-  object1Box.adjust();
+  if (phongShadeValue ==0){
+    object1Box.switchToMe();  // Set WebGL to render from this VBObox.
+    object1Box.adjust();
+  }else{
+    object1GBox.switchToMe();  // Set WebGL to render from this VBObox.
+    object1GBox.adjust();
+  }
+  
 /* // ?How slow is our own code?  	
 var aftrDraw = Date.now();
 var drawWait = aftrDraw - b4Draw;
