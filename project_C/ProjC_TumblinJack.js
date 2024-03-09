@@ -103,6 +103,8 @@ var diffuseB = 0.0;
 var specularR = 0.0;
 var specularG = 0.0;
 var specularB = 0.0;
+var matlSel= MATL_RED_PLASTIC;	
+var matl0 = new Material(matlSel);
 
 
 
@@ -293,6 +295,7 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
   document.getElementById('phongShadingSelect').addEventListener('change', function(event) {
     phongShadeValue = parseInt(event.target.value, 10);
   });
+  window.addEventListener("keypress", myKeyPress, false);
   var tick = function() {		
     
     drawResize();
@@ -813,16 +816,32 @@ function keydown(ev) {
   
   function DiffuseOff(){
     diffuseOff = !diffuseOff;
+    if (diffuseOff){
+      document.getElementById('diffuseclick').textContent = 'Diffuse Off';
+    }else{
+      document.getElementById('diffuseclick').textContent = 'Diffuse On';
+    }
     
   }
 
   function AmbientOff(){
     ambientOff = !ambientOff;
+    if (ambientOff){
+      document.getElementById('ambinetclick').textContent = 'Ambient Off';
+    }else{
+      document.getElementById('ambinetclick').textContent = 'Ambient On';
+    }
+    
     
   }
 
   function SpecOff(){
     specOff = !specOff;
+    if (specOff){
+      document.getElementById('specularclick').textContent = 'Specular Off';
+    }else{
+      document.getElementById('specularclick').textContent = 'Specular On';
+    }
   }
 // Global vars for mouse click-and-drag for rotation.
 var isDrag=false;		// mouse-drag: true when user holds down mouse button
@@ -954,3 +973,37 @@ function myMouseUp(ev, gl, canvas) {
   yMdragTot += (y - yMclik);
   console.log('myMouseUp: xMdragTot,yMdragTot =',xMdragTot,',\t',yMdragTot);
 };
+function myKeyPress(ev) {
+  //===============================================================================
+  // Best for capturing alphanumeric keys and key-combinations such as 
+  // CTRL-C, alt-F, SHIFT-4, etc.
+    switch(ev.keyCode)
+    {
+      case 77:	// UPPER-case 'M' key:
+      case 109:	// LOWER-case 'm' key:
+        matlSel = (matlSel +1)%MATL_DEFAULT;	// see materials_Ayerdi.js for list
+        matl0.setMatl(matlSel);								// set new material reflectances,
+															// re-draw on-screen image.
+        break;
+      case 83: // UPPER-case 's' key:
+        matl0.K_shiny += 1.0;								// INCREASE shinyness, but with a
+        if(matl0.K_shiny > 128.0) matl0.K_shiny = 128.0;	// upper limit.
+        console.log('UPPERcase S: ++K_shiny ==', matl0.K_shiny,'\n');	
+													// re-draw on-screen image.
+        break;
+      case 115:	// LOWER-case 's' key:
+        matl0.K_shiny += -1.0;								// DECREASE shinyness, but with a
+        if(matl0.K_shiny < 1.0) matl0.K_shiny = 1.0;		// lower limit.
+        console.log('lowercase s: --K_shiny ==', matl0.K_shiny, '\n');
+											// re-draw on-screen image.
+        break;
+      default:
+  /* SILENCE!
+      console.log('myKeyPress():keyCode=' +ev.keyCode  +', charCode=' +ev.charCode+
+                            ', shift='    +ev.shiftKey + ', ctrl='    +ev.ctrlKey +
+                            ', altKey='   +ev.altKey   +
+                            ', metaKey(Command key or Windows key)='+ev.metaKey);
+  */
+      break;
+    }
+  }

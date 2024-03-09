@@ -16,13 +16,16 @@
 		<br>
 		You can press<b> 'w', 's', 'a' or 'd' </b>key on keyboard to move the camera forward, backward, to the left or to the right.
 		<br>
+     <b>HEY!  Try the 'M' or 'm' key -- it switches among many different materials!(Only applies to the two assemblies that assemblied by cuboid)</b>
+     <br>
     <b>---------------------User-adjustable Light Section ---------- For the parameter adjusting, it only appplies to the sphere at the origin</b>
+   
     
     <div style="display:flex; align-items: center;">
       <p>
-        <button type="button" onclick="DiffuseOff()">Diffuse On/Off</button>
-        <button type="button" onclick="AmbientOff()">Ambient On/Off</button>
-        <button type="button" onclick="SpecOff()">Specular On/Off</button>
+        <button type="button" id = 'ambinetclick' onclick="AmbientOff()">Ambient On</button>
+        <button type="button" id = 'diffuseclick' onclick="DiffuseOff()">Diffuse On</button>
+        <button type="button" id = 'specularclick' onclick="SpecOff()">Specular On</button>
       </p>
       <div >
         <b>Ambient Section</b>
@@ -129,8 +132,12 @@
       far more complete vector/matrix/quaternion library: (Google it!)
 		<script src="../lib/glmatrix.js"></script>
 --> 
+<script src="materials_Ayerdi.js"></script>
+		<script src="lights-JT.js"></script>
 	<script src="JT_VBObox-Lib.js"></script>
+  
     <script src="ProjC_TumblinJack.js"></script>
+    
     <script>
       function updateInputWithVariable() {
 			document.getElementById('ambientR-value').textContent = ambientR;
@@ -154,5 +161,6 @@
 
         updateInputWithVariable();
     </script>
+    
   </body>
 </html>
