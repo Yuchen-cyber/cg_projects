@@ -12,47 +12,147 @@
     <b>---------------------Keyboard Section ----------</b>
 		
 		<br>
-		You can press <b>'->' </b>key on keyboard to turn the camera head to right.
-
-		You can press <b>'<-' </b>key on keyboard to turn the camera head to left.
-
-		You can press<b> 'up' </b>key on keyboard to raise the camera head.
-
-		You can press<b> 'down'</b> key on keyboard to lower the camera head.
+		You can press <b>'->', '<-', 'up' or 'down' </b>key on keyboard to turn the camera head to right, left, raise the camera head or lower the camera head respectively.
 		<br>
-		You can press<b> 'w' </b>key on keyboard to move the camera forward.
-
-		You can press<b> 's' </b>key on keyboard to move the camera backward.
-
-		You can press<b> 'a' </b>key on keyboard to move the camera to the left.
-
-		You can press<b> 'd' </b>key on keyboard to move the camera to the right.
+		You can press<b> 'w', 's', 'a' or 'd' </b>key on keyboard to move the camera forward, backward, to the left or to the right.
 		<br>
+    <b>---------------------User-adjustable Light Section ---------- For the parameter adjusting, it only appplies to the sphere at the origin</b>
+    
+    <div style="display:flex; align-items: center;">
+      <p>
+        <button type="button" onclick="DiffuseOff()">Diffuse On/Off</button>
+        <button type="button" onclick="AmbientOff()">Ambient On/Off</button>
+        <button type="button" onclick="SpecOff()">Specular On/Off</button>
+      </p>
+      <div >
+        <b>Ambient Section</b>
+        <div>
+          <label for="ambientR">Ambient Red Value:</label>
+        <input type="range" id="ambientR" min="0" max="1" step="0.01" value="1">
+        <span id="ambientR-value">1</span>
+        </div>
+        <div>
+          <label for="ambientG">Ambient Green Value:</label>
+          <input type="range" id="ambientG" min="0" max="1" step="0.01" value="0">
+          <span id="ambientG-value">0</span>
+        </div>
+        <div>
+          <label for="ambientB">Ambient Blue Value:</label>
+        <input type="range" id="ambientB" min="0" max="1" step="0.01" value="0">
+        <span id="ambientB-value">0</span>
+      </div>
+      
+     
+       
+      </div>
 
-    <p>
-      <button type="button" onclick="DiffuseOff()">Diffuse On/Off</button>
-      <button type="button" onclick="AmbientOff()">Ambient On/Off</button>
-      <button type="button" onclick="SpecOff()">Specular On/Off</button>
-      <select id="phongLightingSelect">
-        <option value="0">Blinn-Phong lighting</option>
-        <option value="1">Phong lighting</option>
-      </select>
-      <select id="phongShadingSelect">
-        <option value="0">Phong Shading</option>
-        <option value="1">Gouraud shading</option>
-      </select>
-    </p>
-    <div id='Mouse'> Mouse Drag totals (CVV coords) </div>
-		<button type="button" onClick='clearDrag()'>Clear</button>
+      <div>
+        <b>Diffuse Section</b>
+        <div>
+          <label for="diffuseR">Diffuse R Value:</label>
+          <input type="range" id="diffuseR" min="0" max="1" step="0.01" value="1">
+          <span id="diffuseR-value">1</span>
+        </div>
+        <div>
+          <label for="diffuseG">Diffuse G Value:</label>
+          <input type="range" id="diffuseG" min="0" max="1" step="0.01" value="1">
+          <span id="diffuseG-value">1</span>
+        </div>
+        <div>
+          <label for="diffuseB">Diffuse B Value:</label>
+          <input type="range" id="diffuseB" min="0" max="1" step="0.01" value="0">
+          <span id="diffuseB-value">0</span>
+        </div>
+      </div>
+
+      <div>
+        <b>Specular Section</b>
+        <div>
+          <label for="specularR">Specular R Value:</label>
+          <input type="range" id="specularR" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularR-value">0.296</span>
+        </div>
+        <div>
+          <label for="specularG">Specular G Value:</label>
+          <input type="range" id="specularG" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularG-value">0.296</span>
+        </div>
+        <div>
+          <label for="specularB">Specular B Value:</label>
+          <input type="range" id="specularB" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularB-value">0.296</span>
+        </div>
+      </div>
+
+     <div>
+      <b>Shiness Section</b>
+      <div>
+        <label for="shiness">Shiness Value:</label>
+      <input type="range" id="shiness" min="0" max="100" step="0.01" value="11.264">
+      <span id="Shiness-value">1</span>
+      </div>
+      
+     </div>
+      
+     </div>
+     <div style="display:flex; align-items: center;">
+      <div>
+        <button type="button" onClick='clearDrag()'>Clear</button> 
+      </div>
+      <div id='Mouse' > Mouse Drag totals (CVV coords) </div>
+      
+		  
+     </div>
+     
+     <b>---------------------Interactive switching lighting/shading methods Section ---------- 
+      <div>
+        <select id="phongLightingSelect">
+          <option value="0">Blinn-Phong lighting</option>
+          <option value="1">Phong lighting</option>
+        </select>
+        <select id="phongShadingSelect">
+          <option value="0">Phong Shading</option>
+          <option value="1">Gouraud Shading</option>
+        </select>
+      </div>
+     
+ 
+    </div>
+
+    
     <script src="lib/webgl-utils.js"></script>
     <script src="lib/webgl-debug.js"></script>
     <script src="lib/cuon-utils.js"></script>
     <script src="lib/cuon-matrix-quat03.js"></script>
+    
 <!-- YOU SHOULD UPGRADE to Brandon Jones' far-faster, 
       far more complete vector/matrix/quaternion library: (Google it!)
 		<script src="../lib/glmatrix.js"></script>
 --> 
 	<script src="JT_VBObox-Lib.js"></script>
     <script src="ProjC_TumblinJack.js"></script>
+    <script>
+      function updateInputWithVariable() {
+			document.getElementById('ambientR-value').textContent = ambientR;
+      document.getElementById('ambientG-value').textContent = ambientG;
+      document.getElementById('ambientB-value').textContent = ambientB;
+      
+      document.getElementById('diffuseR-value').textContent = diffuseR;
+      document.getElementById('diffuseG-value').textContent = diffuseG;
+      document.getElementById('diffuseB-value').textContent = diffuseB;
+
+      document.getElementById('specularR-value').textContent = specularR;
+      document.getElementById('specularG-value').textContent = specularG;
+      document.getElementById('specularB-value').textContent = specularB;
+
+      document.getElementById('Shiness-value').textContent = shiness;
+
+
+		}
+		setInterval(updateInputWithVariable, 100);
+
+
+        updateInputWithVariable();
+    </script>
   </body>
 </html>

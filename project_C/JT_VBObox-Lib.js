@@ -1879,11 +1879,11 @@ VBObox1.prototype.adjust = function() {
       gl.uniform3f(this.u_DiffuseLight, 1.0,      0.829,    0.829);
     }
     
-    gl.uniform3f(this.u_Ka, 1, 0, 0);
-    gl.uniform3f(this.u_Kd,1, 1, 0.0);
-    gl.uniform3f(this.u_Ks, 0.296648, 0.296648, 0.296648);
+    gl.uniform3f(this.u_Ka, ambientR, ambientG, ambientB);
+    gl.uniform3f(this.u_Kd,diffuseR, diffuseG, diffuseB);
+    gl.uniform3f(this.u_Ks, specularR, specularG, specularB);
     gl.uniform3f(this.u_Ke, 0.0, 0.0, 0.0);
-    gl.uniform1f(this.shininess, 11.264);
+    gl.uniform1f(this.shininess, shiness);
     gl.uniform1f(this.u_PhongLight, phongLightValue);
 	// Adjust values for our uniforms,
 	this.ModelMatrix.setIdentity();
@@ -8164,11 +8164,11 @@ normalMatrix.setInverseOf(this.ModelMatrix);
             gl.uniform3f(this.u_DiffuseLight, 1.0,      0.829,    0.829);
           }
           
-          gl.uniform3f(this.u_Ka, 1, 0, 0);
-          gl.uniform3f(this.u_Kd,1, 1, 0.0);
-          gl.uniform3f(this.u_Ks, 0.296648, 0.296648, 0.296648);
+          gl.uniform3f(this.u_Ka, ambientR, ambientG, ambientB);
+          gl.uniform3f(this.u_Kd,diffuseR, diffuseG, diffuseB);
+          gl.uniform3f(this.u_Ks, specularR, specularG, specularB);
           gl.uniform3f(this.u_Ke, 0.0, 0.0, 0.0);
-          gl.uniform1f(this.shininess, 11.264);
+          gl.uniform1f(this.shininess, shiness);
           gl.uniform1f(this.u_PhongLight, phongLightValue);
         // Adjust values for our uniforms,
         this.ModelMatrix.setIdentity();

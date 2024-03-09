@@ -93,6 +93,16 @@ sphereGBox = new VBObox9();
 
 var phongLightValue = 0;
 var phongShadeValue = 0;
+var ambientR = 0;
+var ambientG = 0;
+var ambientB = 0;
+var shiness = 0.0;
+var diffuseR = 0.0;
+var diffuseG = 0.0;
+var diffuseB = 0.0;
+var specularR = 0.0;
+var specularG = 0.0;
+var specularB = 0.0;
 
 
 
@@ -284,7 +294,7 @@ setCamera();				// TEMPORARY: set a global camera used by ALL VBObox objects...
     phongShadeValue = parseInt(event.target.value, 10);
   });
   var tick = function() {		
-        
+    
     drawResize();
     timerAll();
     requestAnimationFrame(tick, gl);  
@@ -340,6 +350,7 @@ function timerAll() {
   var nowMS = Date.now();             // current time (in milliseconds)
   var elapsedMS = nowMS - g_lastMS;   // 
   g_lastMS = nowMS;                   // update for next webGL drawing.
+ 
   if(elapsedMS > 1000.0) {            
     // Browsers won't re-draw 'canvas' element that isn't visible on-screen 
     // (user chose a different browser tab, etc.); when users make the browser
@@ -516,6 +527,18 @@ function drawAll() {
 //=============================================================================
   // Clear on-screen HTML-5 <canvas> object:
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  ambientR = parseFloat(document.getElementById('ambientR').value);
+  shiness = parseFloat(document.getElementById('shiness').value);
+  ambientG = parseFloat(document.getElementById('ambientG').value);
+  ambientB = parseFloat(document.getElementById('ambientB').value);
+  
+  diffuseR = parseFloat(document.getElementById('diffuseR').value);
+  diffuseG = parseFloat(document.getElementById('diffuseG').value);
+  diffuseB = parseFloat(document.getElementById('diffuseB').value);
+
+  specularR = parseFloat(document.getElementById('specularR').value);
+  specularG = parseFloat(document.getElementById('specularG').value);
+  specularB = parseFloat(document.getElementById('specularB').value);
 
 var b4Draw = Date.now();
 var b4Wait = b4Draw - g_lastMS;
