@@ -16,9 +16,9 @@
 		<br>
 		You can press<b> 'w', 's', 'a' or 'd' </b>key on keyboard to move the camera forward, backward, to the left or to the right.
 		<br>
-     <b>HEY!  Try the 'M' or 'm' key -- it switches among many different materials!(Only applies to the two assemblies that assemblied by cuboid)</b>
+     <b>HEY!  Try the 'M' or 'm' key -- it switches among many different materials!(Only applies to the two assemblies that are composed of cuboids)</b>
      <br>
-    <b>---------------------User-adjustable Light Section ---------- For the parameter adjusting, it only appplies to the sphere at the origin</b>
+    <b>---------------------User-adjustable Light Section ---------- The RGB values for ambient, diffuse, specular adjusting only appplies to the sphere at the origin</b>
    
     
     <div style="display:flex; align-items: center;">
@@ -109,10 +109,12 @@
      
      <b>---------------------Interactive switching lighting/shading methods Section ---------- 
       <div>
+        Lighting:
         <select id="phongLightingSelect">
           <option value="0">Blinn-Phong lighting</option>
           <option value="1">Phong lighting</option>
         </select>
+        Shading:
         <select id="phongShadingSelect">
           <option value="0">Phong Shading</option>
           <option value="1">Gouraud Shading</option>
@@ -132,11 +134,10 @@
       far more complete vector/matrix/quaternion library: (Google it!)
 		<script src="../lib/glmatrix.js"></script>
 --> 
-<script src="materials_Ayerdi.js"></script>
-		<script src="lights-JT.js"></script>
-	<script src="JT_VBObox-Lib.js"></script>
+<script src="WangYuchen_ProjC_Materials.js"></script>
+	<script src="WangYuchen_ProjC_VBObox.js"></script>
   
-    <script src="ProjC_TumblinJack.js"></script>
+    <script src="WangYuchen_ProjC.js"></script>
     
     <script>
       function updateInputWithVariable() {

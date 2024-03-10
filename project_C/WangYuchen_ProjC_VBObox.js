@@ -3010,7 +3010,7 @@ return;
   if (specOff){
     gl.uniform3f(this.u_Lamp0Spec, 0,0,0);
   }else{
-    gl.uniform3f(this.u_Lamp0Spec, 1,1,1);
+    gl.uniform3f(this.u_Lamp0Spec, 1,0,0);
   }
   
   gl.uniform4f(this.u_eyePosWorld, camPos.elements[0],camPos.elements[1],camPos.elements[2], 1);
@@ -3018,7 +3018,7 @@ return;
   if (ambientOff){
     gl.uniform3f(this.u_AmbientLight, 0, 0, 0);
   }else{
-    gl.uniform3f(this.u_AmbientLight, 0.1,     0.1,    0.1);
+    gl.uniform3f(this.u_AmbientLight, 0.25,     0.20725,  0.20725);
   }
   
 
@@ -5642,7 +5642,7 @@ return;
   if (ambientOff){
     gl.uniform3f(this.u_AmbientLight, 0, 0, 0);
   }else{
-    gl.uniform3f(this.u_AmbientLight, 0.1,     0.1,    0.1);
+    gl.uniform3f(this.u_AmbientLight,  0.25,     0.20725,  0.20725);
   }
   
 
