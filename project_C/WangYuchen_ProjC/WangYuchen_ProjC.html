@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Proj C-LATEST</title>
+  </head>
+
+  <body onload="main()" onresize="drawResize()">
+    <canvas id="webgl" width="600" height="600">
+    Please use a browser that supports "canvas"
+    </canvas>
+    <b>---------------------Keyboard Section ----------</b>
+		
+		<br>
+		You can press <b>'->', '<-', 'up' or 'down' </b>key on keyboard to turn the camera head to right, left, raise the camera head or lower the camera head respectively.
+		<br>
+		You can press<b> 'w', 's', 'a' or 'd' </b>key on keyboard to move the camera forward, backward, to the left or to the right.
+		<br>
+     <b>HEY!  Try the 'M' or 'm' key -- it switches among many different materials!(Only applies to the two assemblies that are composed of cuboids)</b>
+     <br>
+    <b>---------------------User-adjustable Light Section ---------- The RGB values for ambient, diffuse, specular adjusting only appplies to the sphere at the origin</b>
+   
+    
+    <div style="display:flex; align-items: center;">
+      <p>
+        <button type="button" id = 'ambinetclick' onclick="AmbientOff()">Ambient On</button>
+        <button type="button" id = 'diffuseclick' onclick="DiffuseOff()">Diffuse On</button>
+        <button type="button" id = 'specularclick' onclick="SpecOff()">Specular On</button>
+      </p>
+      <div >
+        <b>Ambient Section</b>
+        <div>
+          <label for="ambientR">Ambient Red Value:</label>
+        <input type="range" id="ambientR" min="0" max="1" step="0.01" value="1">
+        <span id="ambientR-value">1</span>
+        </div>
+        <div>
+          <label for="ambientG">Ambient Green Value:</label>
+          <input type="range" id="ambientG" min="0" max="1" step="0.01" value="0">
+          <span id="ambientG-value">0</span>
+        </div>
+        <div>
+          <label for="ambientB">Ambient Blue Value:</label>
+        <input type="range" id="ambientB" min="0" max="1" step="0.01" value="0">
+        <span id="ambientB-value">0</span>
+      </div>
+      
+     
+       
+      </div>
+
+      <div>
+        <b>Diffuse Section</b>
+        <div>
+          <label for="diffuseR">Diffuse R Value:</label>
+          <input type="range" id="diffuseR" min="0" max="1" step="0.01" value="1">
+          <span id="diffuseR-value">1</span>
+        </div>
+        <div>
+          <label for="diffuseG">Diffuse G Value:</label>
+          <input type="range" id="diffuseG" min="0" max="1" step="0.01" value="1">
+          <span id="diffuseG-value">1</span>
+        </div>
+        <div>
+          <label for="diffuseB">Diffuse B Value:</label>
+          <input type="range" id="diffuseB" min="0" max="1" step="0.01" value="0">
+          <span id="diffuseB-value">0</span>
+        </div>
+      </div>
+
+      <div>
+        <b>Specular Section</b>
+        <div>
+          <label for="specularR">Specular R Value:</label>
+          <input type="range" id="specularR" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularR-value">0.296</span>
+        </div>
+        <div>
+          <label for="specularG">Specular G Value:</label>
+          <input type="range" id="specularG" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularG-value">0.296</span>
+        </div>
+        <div>
+          <label for="specularB">Specular B Value:</label>
+          <input type="range" id="specularB" min="0" max="1" step="0.01" value="0.296">
+          <span id="specularB-value">0.296</span>
+        </div>
+      </div>
+
+     <div>
+      <b>Shiness Section</b>
+      <div>
+        <label for="shiness">Shiness Value:</label>
+      <input type="range" id="shiness" min="0" max="100" step="0.01" value="11.264">
+      <span id="Shiness-value">1</span>
+      </div>
+      
+     </div>
+      
+     </div>
+     <div style="display:flex; align-items: center;">
+      <div>
+        <button type="button" onClick='clearDrag()'>Clear</button> 
+      </div>
+      <div id='Mouse' > Mouse Drag totals (CVV coords) </div>
+      
+		  
+     </div>
+     
+     <b>---------------------Interactive switching lighting/shading methods Section ---------- 
+      <div>
+        Lighting:
+        <select id="phongLightingSelect">
+          <option value="0">Blinn-Phong lighting</option>
+          <option value="1">Phong lighting</option>
+        </select>
+        Shading:
+        <select id="phongShadingSelect">
+          <option value="0">Phong Shading</option>
+          <option value="1">Gouraud Shading</option>
+        </select>
+      </div>
+     
+ 
+    </div>
+
+    
+    <script src="lib/webgl-utils.js"></script>
+    <script src="lib/webgl-debug.js"></script>
+    <script src="lib/cuon-utils.js"></script>
+    <script src="lib/cuon-matrix-quat03.js"></script>
+    
+<!-- YOU SHOULD UPGRADE to Brandon Jones' far-faster, 
+      far more complete vector/matrix/quaternion library: (Google it!)
+		<script src="../lib/glmatrix.js"></script>
+--> 
+<script src="WangYuchen_ProjC_Materials.js"></script>
+	<script src="WangYuchen_ProjC_VBObox.js"></script>
+  
+    <script src="WangYuchen_ProjC.js"></script>
+    
+    <script>
+      function updateInputWithVariable() {
+			document.getElementById('ambientR-value').textContent = ambientR;
+      document.getElementById('ambientG-value').textContent = ambientG;
+      document.getElementById('ambientB-value').textContent = ambientB;
+      
+      document.getElementById('diffuseR-value').textContent = diffuseR;
+      document.getElementById('diffuseG-value').textContent = diffuseG;
+      document.getElementById('diffuseB-value').textContent = diffuseB;
+
+      document.getElementById('specularR-value').textContent = specularR;
+      document.getElementById('specularG-value').textContent = specularG;
+      document.getElementById('specularB-value').textContent = specularB;
+
+      document.getElementById('Shiness-value').textContent = shiness;
+
+
+		}
+		setInterval(updateInputWithVariable, 100);
+
+
+        updateInputWithVariable();
+    </script>
+    
+  </body>
+</html>
